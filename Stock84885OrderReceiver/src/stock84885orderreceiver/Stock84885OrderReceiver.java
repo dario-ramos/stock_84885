@@ -9,6 +9,10 @@ import core.Configuration;
 import core.FileLogger;
 import core.FileSystemUtils;
 import core.ILogger;
+import core.IOrders;
+import core.IStock;
+import core.OrdersFile;
+import core.StockFile;
 import java.io.File;
 import java.io.IOException;
 
@@ -34,8 +38,12 @@ public class Stock84885OrderReceiver {
             logger = new FileLogger( FileSystemUtils.getCurrentDir() +
                                      File.separator +
                                      "log.txt" );
+            IStock stock = new StockFile( FileSystemUtils.getCurrentDir() +
+                                     File.separator +
+                                     "stock.txt" );
+            IOrders orders = new OrdersFile();
             OrderReceiverController orderReceiver =
-                new OrderReceiverController(id, config, logger);
+                new OrderReceiverController(id, stock, orders, config, logger);
             orderReceiver.run();
         }catch( Exception ex ){
             if( logger != null ){

@@ -5,14 +5,10 @@
  */
 package core;
 
-import core.Order.EProductType;
-import java.io.IOException;
-
 /**
  *
  * @author dario
  */
-public interface IStock {
-    public boolean available( EProductType type, int count )
-            throws IOException;
+public class OrdersFile implements IOrders{
+    
 }

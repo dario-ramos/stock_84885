@@ -12,8 +12,10 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
+import com.rabbitmq.client.MessageProperties;
 import core.Configuration;
 import core.ILogger;
+import core.IOrders;
 import core.IStock;
 import core.Order;
 import java.io.IOException;
@@ -70,7 +72,7 @@ public class OrderReceiverController {
             Order order = Order.deserialize( body );
             try {
                 processOrder(order);
-            } catch (InterruptedException ex) {
+            } catch (InterruptedException | TimeoutException ex) {
                 _logger.error( ex.toString() );
             } finally {
                 channel.basicAck(envelope.getDeliveryTag(), false);
@@ -81,14 +83,37 @@ public class OrderReceiverController {
     }
 
     private void processOrder(Order order)
-            throws InterruptedException, IOException {
+            throws InterruptedException, IOException, TimeoutException {
         _logger.trace( _name + " received order: " + order.toString() );
         boolean available = _stock.available(order.ProductType, order.Count);
         if( !available ){
-            //TODO <NIM> Notify customer
+            sendOrderResultToCustomer( order.CustomerName,
+                                       Order.ORDER_REJECTED);
             //TODO <NIM> register order as rejected
             return;
         }
+    }
+
+    private void sendOrderResultToCustomer( String customerName,
+                                            String result )
+            throws IOException, TimeoutException{
+        ConnectionFactory factory = new ConnectionFactory();
+        factory.setHost("localhost");
+        Connection connection = factory.newConnection();
+        Channel channel = connection.createChannel();
+        channel.queueDeclare(
+                customerName,
+                true, //Passive declaration
+                false, //Non-durable queue
+                false, //Non-exclusive queue
+                null    //No arguments
+        );
+        channel.basicPublish( "",
+                              customerName,
+                              MessageProperties.PERSISTENT_TEXT_PLAIN,
+                              result.getBytes() );
+        channel.close();
+        connection.close();
     }
 
 }

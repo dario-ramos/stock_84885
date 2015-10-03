@@ -70,4 +70,8 @@
     nbproject/build-impl.xml file. 
 
     -->
+    <target name="-post-jar">
+        <copy file="dist/Stock84885OrderReceiver.jar" todir="../bin" />
+    </target>
+
 </project>

@@ -9,6 +9,8 @@ import core.Configuration;
 import core.FileLogger;
 import core.ILogger;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -41,6 +43,7 @@ public class Stock84885Customer {
             if( logger != null ){
                 try {
                     logger.error( ex.toString() );
+                    logger.error( getStackTrace(ex) );
                 } catch (IOException ex1) {
                     System.err.println( ex1 );
                 }
@@ -50,4 +53,9 @@ public class Stock84885Customer {
         }
     }
     
+    public static String getStackTrace(Throwable t) {
+        StringWriter sw = new StringWriter();
+        t.printStackTrace(new PrintWriter(sw));
+        return sw.toString();
+    }
 }
