@@ -29,26 +29,33 @@ import java.util.concurrent.TimeoutException;
 public class OrderReceiverController {
 
     private Channel _resultsChannel;
+    private Channel _shippingChannel;
     private final ILogger _logger;
     private final IOrders _orders;
     private final IStock _stock;
-    private final int _id;
+    private final String _hostName;
     private final String _name;
     private final String _ordersExchangeName;
     private final String _resultsExchangeName;
+    private final String _shippingExchangeName;
 
     public OrderReceiverController( int id,
                                     IStock stock, 
                                     IOrders orders,
                                     Configuration config, ILogger logger ){
-        _id = id;
         _ordersExchangeName = config.getProperty(
             Configuration.ORDERS_EXCHANGE_NAME
         );
         _resultsExchangeName = config.getProperty(
             Configuration.RESULTS_EXCHANGE_NAME
         );
-        _name = "OrderReceiver-" + _id;
+        _shippingExchangeName = config.getProperty(
+            Configuration.SHIPPING_EXCHANGE_NAME
+        );
+        _hostName = config.getProperty(
+            Configuration.ORDER_RECEIVER_HOSTNAME
+        );
+        _name = "OrderReceiver-" + id;
         _logger = logger;
         _stock = stock;
         _orders = orders;
@@ -56,10 +63,11 @@ public class OrderReceiverController {
 
     public void run() throws IOException, TimeoutException{
         ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost("localhost");
+        factory.setHost(_hostName);
         final Connection connection = factory.newConnection();
         final Channel ordersChannel = connection.createChannel();
         _resultsChannel = connection.createChannel();
+        _shippingChannel = connection.createChannel();
         ordersChannel.queueDeclare(
             _ordersExchangeName,
             true, //Passive declaration
@@ -68,6 +76,13 @@ public class OrderReceiverController {
             null //No arguments
         );
         _resultsChannel.exchangeDeclare(_resultsExchangeName, "direct");
+        _shippingChannel.queueDeclare(
+                _shippingExchangeName,
+                true, //Passive declaration
+                false, //Non-durable queue
+                false, //Non-exclusive queue
+                null    //No arguments
+        );
         System.out.println(" [*] Waiting for orders. To exit press CTRL+C");
         _logger.trace( _name + " waiting for orders" );
         ordersChannel.basicQos(1);
@@ -93,7 +108,7 @@ public class OrderReceiverController {
     private void processOrder(Order order)
             throws InterruptedException, IOException, TimeoutException {
         _logger.trace( _name + " received order: " + order.toString() );
-        _orders.setState( order, EOrderState.RECEIVED );
+        _orders.create( order, EOrderState.RECEIVED );
         boolean available = _stock.decrement(order.ProductType, order.Count);
         if( !available ){
             _orders.setState( order, EOrderState.REJECTED );
@@ -104,6 +119,7 @@ public class OrderReceiverController {
         _orders.setState( order, Order.EOrderState.APPROVED );
         sendOrderResultToCustomer( order.CustomerName,
                                    EOrderState.APPROVED.name() );
+        sendOrderToShipping( order );
     }
 
     private void sendOrderResultToCustomer( String customerName,
@@ -116,6 +132,18 @@ public class OrderReceiverController {
             customerName,
             MessageProperties.PERSISTENT_TEXT_PLAIN,
             result.getBytes()
+        );
+    }
+
+    private void sendOrderToShipping( Order order ) throws IOException{
+        _logger.trace(
+            _name + " sending order " + order.getID() + " to Shipping"
+        );
+        _shippingChannel.basicPublish(
+            "",
+            _shippingExchangeName,
+            MessageProperties.PERSISTENT_TEXT_PLAIN,
+            order.serialize()
         );
     }
 

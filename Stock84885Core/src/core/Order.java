@@ -47,11 +47,11 @@ public class Order implements Serializable{
 
     public String CustomerName;
     public EProductType ProductType;
-    private final UUID _uid;
+    private String _id;
     public int Count;
 
     public Order(){
-        _uid = UUID.randomUUID();
+        _id = "";
     }
 
     public byte[] serialize(){
@@ -59,7 +59,11 @@ public class Order implements Serializable{
     }
 
     public String getID(){
-        return _uid.toString();
+        return _id;
+    }
+
+    public void setID( String id ){
+        _id = id;
     }
 
     @Override

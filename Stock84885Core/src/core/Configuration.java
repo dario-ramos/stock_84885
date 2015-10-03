@@ -22,14 +22,22 @@ import java.util.Properties;
  */
 public class Configuration {
     private static final String CONFIG_FILE_NAME = "config.properties";
+    public static final String CUSTOMER_HOSTNAME = "customer_hostname";
     public static final String DELIVERY_EXCHANGE_NAME =
         "delivery_exchange_name";
+    public static final String MAX_ORDER_DELIVERY_DELAY = 
+        "max_order_delivery_delay";
     public static final String MAX_ORDER_GENERATION_DELAY =
         "max_order_generation_delay";
     public static final String MAX_ORDER_PRODUCT_COUNT =
         "max_order_product_count";
+    public static final String ORDER_RECEIVER_HOSTNAME =
+        "order_receiver_hostname";
     public static final String ORDERS_EXCHANGE_NAME = "orders_exchange_name";
     public static final String RESULTS_EXCHANGE_NAME = "results_exchange_name";
+    public static final String SHIPPING_EXCHANGE_NAME =
+        "shipping_exchange_name";
+    public static final String SHIPPING_HOSTNAME = "shipping_hostname";
     private Properties _props = null;
 
     public Configuration() throws FileNotFoundException, IOException,

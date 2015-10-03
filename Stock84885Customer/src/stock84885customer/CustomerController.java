@@ -36,10 +36,12 @@ public class CustomerController {
     private final int _id;
     private final int _maxOrderGenerationDelay;
     private final int _maxProductCount;
+    private final String _hostName;
     private final String _name;
     private final String _deliveryExchangeName;
     private final String _ordersExchangeName;
     private final String _resultsExchangeName;
+    private String _deliveryConsumerTag;
     private String _deliveryQueueName;
     private String _resultQueueName;
 
@@ -59,6 +61,9 @@ public class CustomerController {
         );
         _maxProductCount = Integer.parseInt(
             config.getProperty( Configuration.MAX_ORDER_PRODUCT_COUNT )
+        );
+        _hostName = config.getProperty(
+            Configuration.CUSTOMER_HOSTNAME
         );
         _name = "Customer-" + _id;
         _logger = logger;
@@ -85,21 +90,18 @@ public class CustomerController {
         return order;
     }
 
-    private void handleOrderResult( String orderResult ) throws IOException{
+    private void handleOrderResult( String orderResult )
+            throws IOException, TimeoutException{
         _logger.trace( _name + " received order result: " + orderResult );
         if( orderResult.equals(EOrderState.REJECTED.name()) ){
-            return;
+            _deliveryChannel.basicCancel( _deliveryConsumerTag );
+            _deliveryChannel.close();
         }
-        //If order was not rejected, wait for it to be delivered
-        //TODO <NIM>
-        /*_deliveryChannel.basicConsume(
-            _deliveryQueueName, false, _deliveryConsumer
-        );*/
     }
 
     private void initResultChannel() throws IOException, TimeoutException{
         ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost("localhost");
+        factory.setHost(_hostName);
         final Connection connection = factory.newConnection();
         _resultChannel = connection.createChannel();
         _resultChannel.exchangeDeclare( _resultsExchangeName, "direct" );
@@ -113,10 +115,10 @@ public class CustomerController {
                                      Envelope envelope,
                                      AMQP.BasicProperties properties,
                                      byte[] body) throws IOException {
-            handleOrderResult( new String( body, "UTF-8" ) );
             try {
+                handleOrderResult( new String( body, "UTF-8" ) );
                 _resultChannel.close();
-            } catch (TimeoutException ex) {
+            } catch (Exception ex) {
                 _logger.error( ex.toString() );
             }
             connection.close();
@@ -126,7 +128,7 @@ public class CustomerController {
 
     private void initDeliveryChannel() throws IOException, TimeoutException{
         ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost("localhost");
+        factory.setHost(_hostName);
         final Connection connection = factory.newConnection();
         _deliveryChannel = connection.createChannel();
         _deliveryChannel.exchangeDeclare( _deliveryExchangeName, "direct" );
@@ -140,7 +142,8 @@ public class CustomerController {
                                      Envelope envelope,
                                      AMQP.BasicProperties properties,
                                      byte[] body) throws IOException {
-            _logger.trace( _name + " order received!" );
+            String orderID = new String( body, "UTF-8" );
+            _logger.trace( _name + " received order " + orderID + "!" );
             try {
                 _deliveryChannel.close();
             } catch (TimeoutException ex) {
@@ -149,12 +152,15 @@ public class CustomerController {
             connection.close();
           }
         };
+        _deliveryConsumerTag = _deliveryChannel.basicConsume(
+            _deliveryQueueName, false, _deliveryConsumer
+        );
     }
 
     private void sendOrder() throws IOException,
                                     TimeoutException, InterruptedException{
         ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost("localhost");
+        factory.setHost(_hostName);
         Connection connection = factory.newConnection();
         Channel channel = connection.createChannel();
         channel.queueDeclare(

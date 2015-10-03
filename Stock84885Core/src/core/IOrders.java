@@ -13,5 +13,10 @@ import java.io.IOException;
  * @author dario
  */
 public interface IOrders {
-    public void setState( Order order, EOrderState state ) throws IOException;
+    public void create( Order order, EOrderState initialState )
+        throws IOException;
+    public void setState( Order order, EOrderState state )
+        throws IOException;
+    public void setState( String orderID, EOrderState state )
+        throws IOException;
 }
