@@ -35,13 +35,11 @@ public class Stock84885OrderReceiver {
             }
             int id = Integer.parseInt(args[0]);
             Configuration config = new Configuration();
-            logger = new FileLogger( FileSystemUtils.getCurrentDir() +
-                                     File.separator +
-                                     "log.txt" );
-            IStock stock = new StockFile( FileSystemUtils.getCurrentDir() +
-                                     File.separator +
-                                     "stock.txt" );
-            IOrders orders = new OrdersFile();
+            String currDirPrefix = FileSystemUtils.getCurrentDir() +
+                                   File.separator;
+            logger = new FileLogger( currDirPrefix + "log.txt" );
+            IStock stock = new StockFile( currDirPrefix + "stock.txt" );
+            IOrders orders = new OrdersFile( currDirPrefix + "orders.txt" );
             OrderReceiverController orderReceiver =
                 new OrderReceiverController(id, stock, orders, config, logger);
             orderReceiver.run();

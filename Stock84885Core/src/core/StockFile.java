@@ -44,7 +44,7 @@ public class StockFile implements IStock {
         }
         return result;
     }
-    
+
     private boolean readAvailability(Order.EProductType type, int count)
             throws IOException{
         Path filePath = Paths.get( _filePath );

@@ -5,10 +5,13 @@
  */
 package core;
 
+import core.Order.EOrderState;
+import java.io.IOException;
+
 /**
  *
  * @author dario
  */
 public interface IOrders {
-    
+    public void setState( Order order, EOrderState state ) throws IOException;
 }

@@ -18,6 +18,7 @@ import core.ILogger;
 import core.IOrders;
 import core.IStock;
 import core.Order;
+import core.Order.EOrderState;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
@@ -92,17 +93,18 @@ public class OrderReceiverController {
     private void processOrder(Order order)
             throws InterruptedException, IOException, TimeoutException {
         _logger.trace( _name + " received order: " + order.toString() );
+        _orders.setState( order, EOrderState.RECEIVED );
         boolean available = _stock.available(order.ProductType, order.Count);
         if( !available ){
+            _orders.setState( order, EOrderState.REJECTED );
             sendOrderResultToCustomer( order.CustomerName,
-                                       Order.ORDER_REJECTED);
-            //TODO <NIM> register order as rejected
+                                       EOrderState.REJECTED.name());
             return;
         }
+        _orders.setState( order, Order.EOrderState.APPROVED );
         sendOrderResultToCustomer( order.CustomerName,
-                                   Order.ORDER_APPROVED);
+                                   EOrderState.APPROVED.name() );
     }
-    
 
     private void sendOrderResultToCustomer( String customerName,
                                             String result )

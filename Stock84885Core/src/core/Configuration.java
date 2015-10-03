@@ -22,6 +22,8 @@ import java.util.Properties;
  */
 public class Configuration {
     private static final String CONFIG_FILE_NAME = "config.properties";
+    public static final String DELIVERY_EXCHANGE_NAME =
+        "delivery_exchange_name";
     public static final String MAX_ORDER_GENERATION_DELAY =
         "max_order_generation_delay";
     public static final String MAX_ORDER_PRODUCT_COUNT =

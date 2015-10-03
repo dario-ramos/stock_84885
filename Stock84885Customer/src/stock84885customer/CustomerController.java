@@ -16,6 +16,7 @@ import com.rabbitmq.client.MessageProperties;
 import core.Configuration;
 import core.ILogger;
 import core.Order;
+import core.Order.EOrderState;
 import core.Order.EProductType;
 import java.io.IOException;
 import java.util.Random;
@@ -27,15 +28,19 @@ import java.util.concurrent.TimeoutException;
  */
 public class CustomerController {
 
+    private Channel _deliveryChannel;
     private Channel _resultChannel;
+    private Consumer _deliveryConsumer;
     private Consumer _resultConsumer;
     private final ILogger _logger;
     private final int _id;
     private final int _maxOrderGenerationDelay;
     private final int _maxProductCount;
     private final String _name;
+    private final String _deliveryExchangeName;
     private final String _ordersExchangeName;
     private final String _resultsExchangeName;
+    private String _deliveryQueueName;
     private String _resultQueueName;
 
     public CustomerController( int id, Configuration config, ILogger logger ){
@@ -45,6 +50,9 @@ public class CustomerController {
         );
         _resultsExchangeName = config.getProperty(
             Configuration.RESULTS_EXCHANGE_NAME
+        );
+        _deliveryExchangeName = config.getProperty(
+            Configuration.DELIVERY_EXCHANGE_NAME
         );
         _maxOrderGenerationDelay = Integer.parseInt(
             config.getProperty( Configuration.MAX_ORDER_GENERATION_DELAY )
@@ -59,6 +67,7 @@ public class CustomerController {
     public void run()
             throws IOException, TimeoutException, InterruptedException{
         initResultChannel();
+        initDeliveryChannel();
         sendOrder();
         _resultChannel.basicConsume( _resultQueueName, false, _resultConsumer);
     }
@@ -78,10 +87,13 @@ public class CustomerController {
 
     private void handleOrderResult( String orderResult ) throws IOException{
         _logger.trace( _name + " received order result: " + orderResult );
-        if( orderResult.equals(Order.ORDER_REJECTED) ){
+        if( orderResult.equals(EOrderState.REJECTED.name()) ){
             return;
         }
-        waitForOrder();
+        //If order was not rejected, wait for it to be delivered
+        _deliveryChannel.basicConsume(
+            _deliveryQueueName, false, _deliveryConsumer
+        );
     }
 
     private void initResultChannel() throws IOException, TimeoutException{
@@ -111,6 +123,33 @@ public class CustomerController {
         };
     }
 
+    private void initDeliveryChannel() throws IOException, TimeoutException{
+        ConnectionFactory factory = new ConnectionFactory();
+        factory.setHost("localhost");
+        final Connection connection = factory.newConnection();
+        _deliveryChannel = connection.createChannel();
+        _deliveryChannel.exchangeDeclare( _deliveryExchangeName, "direct" );
+        _deliveryQueueName = _deliveryChannel.queueDeclare().getQueue();
+        _deliveryChannel.queueBind(
+                _deliveryQueueName, _deliveryExchangeName, _name
+        );
+        _deliveryConsumer = new DefaultConsumer(_deliveryChannel){
+          @Override
+          public void handleDelivery(String consumerTag,
+                                     Envelope envelope,
+                                     AMQP.BasicProperties properties,
+                                     byte[] body) throws IOException {
+            _logger.trace( _name + " order received!" );
+            try {
+                _deliveryChannel.close();
+            } catch (TimeoutException ex) {
+                _logger.error( ex.toString() );
+            }
+            connection.close();
+          }
+        };
+    }
+
     private void sendOrder() throws IOException,
                                     TimeoutException, InterruptedException{
         ConnectionFactory factory = new ConnectionFactory();
@@ -132,10 +171,6 @@ public class CustomerController {
         _logger.trace( _name + " sent order " + order.toString() );
         channel.close();
         connection.close();
-    }
-
-    private void waitForOrder(){
-        //TODO <NIM>
     }
 
 }

@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 import org.apache.commons.lang3.SerializationUtils;
 
 /**
@@ -18,8 +19,12 @@ import org.apache.commons.lang3.SerializationUtils;
  */
 public class Order implements Serializable{
 
-    public static final String ORDER_REJECTED = "REJECTED";
-    public static final String ORDER_APPROVED = "APPROVED";
+    public enum EOrderState{
+        RECEIVED,
+        APPROVED,
+        REJECTED,
+        DELIVERED
+    }
 
     public enum EProductType{
         TYPE_A,
@@ -29,7 +34,7 @@ public class Order implements Serializable{
         TYPE_E,
         TYPE_F,
         TYPE_G;
-        
+
         private static final List<EProductType> VALUES =
             Collections.unmodifiableList(Arrays.asList(values()));
         private static final int SIZE = VALUES.size();
@@ -42,10 +47,19 @@ public class Order implements Serializable{
 
     public String CustomerName;
     public EProductType ProductType;
+    private final UUID _uid;
     public int Count;
+
+    public Order(){
+        _uid = UUID.randomUUID();
+    }
 
     public byte[] serialize(){
         return SerializationUtils.serialize(this);
+    }
+
+    public String getID(){
+        return _uid.toString();
     }
 
     @Override
