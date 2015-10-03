@@ -21,12 +21,13 @@ import java.util.Properties;
  * @author dario
  */
 public class Configuration {
-    public static final String ORDERS_EXCHANGE_NAME = "orders_exchange_name";
+    private static final String CONFIG_FILE_NAME = "config.properties";
     public static final String MAX_ORDER_GENERATION_DELAY =
         "max_order_generation_delay";
     public static final String MAX_ORDER_PRODUCT_COUNT =
         "max_order_product_count";
-    private static final String CONFIG_FILE_NAME = "config.properties";
+    public static final String ORDERS_EXCHANGE_NAME = "orders_exchange_name";
+    public static final String RESULTS_EXCHANGE_NAME = "results_exchange_name";
     private Properties _props = null;
 
     public Configuration() throws FileNotFoundException, IOException,

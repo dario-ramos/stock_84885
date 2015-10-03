@@ -12,7 +12,6 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
-import com.rabbitmq.client.GetResponse;
 import com.rabbitmq.client.MessageProperties;
 import core.Configuration;
 import core.ILogger;
@@ -20,13 +19,7 @@ import core.Order;
 import core.Order.EProductType;
 import java.io.IOException;
 import java.util.Random;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -34,18 +27,24 @@ import java.util.logging.Logger;
  */
 public class CustomerController {
 
+    private Channel _resultChannel;
+    private Consumer _resultConsumer;
     private final ILogger _logger;
     private final int _id;
     private final int _maxOrderGenerationDelay;
     private final int _maxProductCount;
     private final String _name;
     private final String _ordersExchangeName;
-    private String _orderResult;
+    private final String _resultsExchangeName;
+    private String _resultQueueName;
 
     public CustomerController( int id, Configuration config, ILogger logger ){
         _id = id;
         _ordersExchangeName = config.getProperty(
             Configuration.ORDERS_EXCHANGE_NAME
+        );
+        _resultsExchangeName = config.getProperty(
+            Configuration.RESULTS_EXCHANGE_NAME
         );
         _maxOrderGenerationDelay = Integer.parseInt(
             config.getProperty( Configuration.MAX_ORDER_GENERATION_DELAY )
@@ -59,8 +58,9 @@ public class CustomerController {
 
     public void run()
             throws IOException, TimeoutException, InterruptedException{
+        initResultChannel();
         sendOrder();
-        receiveOrderResult();
+        _resultChannel.basicConsume( _resultQueueName, false, _resultConsumer);
     }
 
     private Order generateOrder() throws IOException, InterruptedException{
@@ -75,38 +75,40 @@ public class CustomerController {
         Thread.sleep( delay );
         return order;
     }
-    
-    private void receiveOrderResult() throws IOException, TimeoutException,
-                                             InterruptedException{
+
+    private void handleOrderResult( String orderResult ) throws IOException{
+        _logger.trace( _name + " received order result: " + orderResult );
+        if( orderResult.equals(Order.ORDER_REJECTED) ){
+            return;
+        }
+        waitForOrder();
+    }
+
+    private void initResultChannel() throws IOException, TimeoutException{
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost("localhost");
         final Connection connection = factory.newConnection();
-        final Channel channel = connection.createChannel();
-        channel.queueDeclare(
-            _name,
-            true, //Passive declaration
-            false, //Non-durable queue
-            false, //Non-exclusive queue
-            null //No arguments
+        _resultChannel = connection.createChannel();
+        _resultChannel.exchangeDeclare( _resultsExchangeName, "direct" );
+        _resultQueueName = _resultChannel.queueDeclare().getQueue();
+        _resultChannel.queueBind(
+                _resultQueueName, _resultsExchangeName, _name
         );
-        channel.basicQos(1);
-        final Consumer consumer = new DefaultConsumer(channel) {
+        _resultConsumer = new DefaultConsumer(_resultChannel){
           @Override
           public void handleDelivery(String consumerTag,
                                      Envelope envelope,
                                      AMQP.BasicProperties properties,
                                      byte[] body) throws IOException {
-            _orderResult = new String( body, "UTF-8" );
-            _logger.trace( _name + " received order result: " + _orderResult );
+            handleOrderResult( new String( body, "UTF-8" ) );
             try {
-                channel.close();
+                _resultChannel.close();
             } catch (TimeoutException ex) {
                 _logger.error( ex.toString() );
             }
             connection.close();
           }
         };
-        channel.basicConsume( _name, false, consumer);
     }
 
     private void sendOrder() throws IOException,
@@ -130,6 +132,10 @@ public class CustomerController {
         _logger.trace( _name + " sent order " + order.toString() );
         channel.close();
         connection.close();
+    }
+
+    private void waitForOrder(){
+        //TODO <NIM>
     }
 
 }

@@ -27,12 +27,14 @@ import java.util.concurrent.TimeoutException;
  */
 public class OrderReceiverController {
 
+    private Channel _resultsChannel;
     private final ILogger _logger;
     private final IOrders _orders;
     private final IStock _stock;
     private final int _id;
     private final String _name;
     private final String _ordersExchangeName;
+    private final String _resultsExchangeName;
 
     public OrderReceiverController( int id,
                                     IStock stock, 
@@ -41,6 +43,9 @@ public class OrderReceiverController {
         _id = id;
         _ordersExchangeName = config.getProperty(
             Configuration.ORDERS_EXCHANGE_NAME
+        );
+        _resultsExchangeName = config.getProperty(
+            Configuration.RESULTS_EXCHANGE_NAME
         );
         _name = "OrderReceiver-" + _id;
         _logger = logger;
@@ -52,18 +57,20 @@ public class OrderReceiverController {
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost("localhost");
         final Connection connection = factory.newConnection();
-        final Channel channel = connection.createChannel();
-        channel.queueDeclare(
+        final Channel ordersChannel = connection.createChannel();
+        _resultsChannel = connection.createChannel();
+        ordersChannel.queueDeclare(
             _ordersExchangeName,
             true, //Passive declaration
             false, //Non-durable queue
             false, //Non-exclusive queue
             null //No arguments
         );
+        _resultsChannel.exchangeDeclare(_resultsExchangeName, "direct");
         System.out.println(" [*] Waiting for orders. To exit press CTRL+C");
         _logger.trace( _name + " waiting for orders" );
-        channel.basicQos(1);
-        final Consumer consumer = new DefaultConsumer(channel) {
+        ordersChannel.basicQos(1);
+        final Consumer consumer = new DefaultConsumer(ordersChannel) {
           @Override
           public void handleDelivery(String consumerTag,
                                      Envelope envelope,
@@ -75,11 +82,11 @@ public class OrderReceiverController {
             } catch (InterruptedException | TimeoutException ex) {
                 _logger.error( ex.toString() );
             } finally {
-                channel.basicAck(envelope.getDeliveryTag(), false);
+                ordersChannel.basicAck(envelope.getDeliveryTag(), false);
             }
           }
         };
-        channel.basicConsume( _ordersExchangeName, false, consumer);
+        ordersChannel.basicConsume( _ordersExchangeName, false, consumer);
     }
 
     private void processOrder(Order order)
@@ -93,30 +100,21 @@ public class OrderReceiverController {
             return;
         }
         sendOrderResultToCustomer( order.CustomerName,
-                                       Order.ORDER_APPROVED);
+                                   Order.ORDER_APPROVED);
     }
+    
 
     private void sendOrderResultToCustomer( String customerName,
                                             String result )
             throws IOException, TimeoutException{
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost("localhost");
-        Connection connection = factory.newConnection();
-        Channel channel = connection.createChannel();
-        channel.queueDeclare(
-                customerName,
-                true, //Passive declaration
-                false, //Non-durable queue
-                false, //Non-exclusive queue
-                null    //No arguments
+        _logger.trace( _name + " sending order result " + result + " to " +
+                       customerName );
+        _resultsChannel.basicPublish(
+            _resultsExchangeName,
+            customerName,
+            MessageProperties.PERSISTENT_TEXT_PLAIN,
+            result.getBytes()
         );
-        _logger.trace( _name + " sending order result " + result );
-        channel.basicPublish( "",
-                              customerName,
-                              MessageProperties.PERSISTENT_TEXT_PLAIN,
-                              result.getBytes() );
-        channel.close();
-        connection.close();
     }
 
 }
