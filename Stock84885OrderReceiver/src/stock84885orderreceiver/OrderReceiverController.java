@@ -92,6 +92,8 @@ public class OrderReceiverController {
             //TODO <NIM> register order as rejected
             return;
         }
+        sendOrderResultToCustomer( order.CustomerName,
+                                       Order.ORDER_APPROVED);
     }
 
     private void sendOrderResultToCustomer( String customerName,
@@ -108,6 +110,7 @@ public class OrderReceiverController {
                 false, //Non-exclusive queue
                 null    //No arguments
         );
+        _logger.trace( _name + " sending order result " + result );
         channel.basicPublish( "",
                               customerName,
                               MessageProperties.PERSISTENT_TEXT_PLAIN,

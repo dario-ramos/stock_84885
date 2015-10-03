@@ -19,6 +19,7 @@ import org.apache.commons.lang3.SerializationUtils;
 public class Order implements Serializable{
 
     public static final String ORDER_REJECTED = "REJECTED";
+    public static final String ORDER_APPROVED = "APPROVED";
 
     public enum EProductType{
         TYPE_A,

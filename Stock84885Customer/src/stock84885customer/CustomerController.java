@@ -20,7 +20,13 @@ import core.Order;
 import core.Order.EProductType;
 import java.io.IOException;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -70,7 +76,8 @@ public class CustomerController {
         return order;
     }
     
-    private void receiveOrderResult() throws IOException, TimeoutException{
+    private void receiveOrderResult() throws IOException, TimeoutException,
+                                             InterruptedException{
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost("localhost");
         final Connection connection = factory.newConnection();
@@ -90,11 +97,16 @@ public class CustomerController {
                                      AMQP.BasicProperties properties,
                                      byte[] body) throws IOException {
             _orderResult = new String( body, "UTF-8" );
-            channel.basicCancel(consumerTag);
+            _logger.trace( _name + " received order result: " + _orderResult );
+            try {
+                channel.close();
+            } catch (TimeoutException ex) {
+                _logger.error( ex.toString() );
+            }
+            connection.close();
           }
         };
         channel.basicConsume( _name, false, consumer);
-        _logger.trace( _name + " received order result: " + _orderResult );
     }
 
     private void sendOrder() throws IOException,
