@@ -10,14 +10,11 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InvalidObjectException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.List;
 
 /**
  *
@@ -27,7 +24,6 @@ public class OrdersFile implements IOrders{
 
     private final String _filePath;
     private final String _lockFilePath;
-    private static final String NEWLINE = System.getProperty("line.separator");
 
     public OrdersFile( String filePath ){
         _filePath = filePath;
@@ -52,8 +48,7 @@ public class OrdersFile implements IOrders{
                order.CustomerName + "|" +
                order.ProductType + "|" +
                order.Count + "|" +
-               state.name() +
-               NEWLINE;
+               state.name();
     }
 
     private void doSetState(Order order, Order.EOrderState state)
@@ -63,7 +58,7 @@ public class OrdersFile implements IOrders{
         String line;
         String input = "";
         while ((line = file.readLine()) != null){
-            input += line + NEWLINE;
+            input += line + FileSystemUtils.NEWLINE;
         }
         file.close();
         //Replace state
@@ -72,7 +67,9 @@ public class OrdersFile implements IOrders{
         if( iOrderId <= -1 ){
             input += orderToFileLine( order, state );
         }else{
-            int iEndOfLine = input.indexOf( NEWLINE, iOrderId );
+            int iEndOfLine = input.indexOf(
+                FileSystemUtils.NEWLINE, iOrderId
+            );
             String lineToReplace = input.substring(iOrderId, iEndOfLine);
             input = input.replace(
                 lineToReplace, orderToFileLine( order, state )

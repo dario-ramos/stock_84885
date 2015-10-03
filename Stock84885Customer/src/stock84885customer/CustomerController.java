@@ -91,9 +91,10 @@ public class CustomerController {
             return;
         }
         //If order was not rejected, wait for it to be delivered
-        _deliveryChannel.basicConsume(
+        //TODO <NIM>
+        /*_deliveryChannel.basicConsume(
             _deliveryQueueName, false, _deliveryConsumer
-        );
+        );*/
     }
 
     private void initResultChannel() throws IOException, TimeoutException{

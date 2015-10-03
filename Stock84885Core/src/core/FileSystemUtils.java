@@ -14,6 +14,8 @@ import java.net.URISyntaxException;
  */
 public class FileSystemUtils {
 
+    public static final String NEWLINE = System.getProperty("line.separator");
+
     public static String getCurrentDir() throws URISyntaxException{
         String dir = new File(
             Configuration.class.getProtectionDomain().getCodeSource().

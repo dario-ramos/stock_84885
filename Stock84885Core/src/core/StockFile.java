@@ -5,15 +5,17 @@
  */
 package core;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InvalidObjectException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.List;
 
 /**
  * Use a file lock to access a text file (couldn't figure out how to
@@ -31,41 +33,64 @@ public class StockFile implements IStock {
     }
 
     @Override
-    public boolean available(Order.EProductType type, int count)
+    public boolean decrement(Order.EProductType type, int count)
             throws IOException {
         Path path = Paths.get( _lockFilePath );
         boolean result = false;
         try (FileChannel fileChannel = FileChannel.open(
                 path, StandardOpenOption.WRITE, StandardOpenOption.APPEND )){
             FileLock lock = fileChannel.lock();
-            result = readAvailability( type, count );
+            result = doReduce( type, count );
             lock.release();
             fileChannel.close();
         }
         return result;
     }
 
-    private boolean readAvailability(Order.EProductType type, int count)
+    private boolean doReduce(Order.EProductType type, int count)
             throws IOException{
-        Path filePath = Paths.get( _filePath );
-        List<String> lines = Files.readAllLines(filePath);
-        for( int i=0; i<lines.size(); i++ ){
-            String line = lines.get(i);
-            String[] prodAndStock = line.split("=");
-            if( prodAndStock.length != 2 ){
-                throw new InvalidObjectException(
-                        "Bad stock entry : " + line );
-            }
-            Order.EProductType prodType = Order.EProductType.valueOf(
-                prodAndStock[0].trim()
-            );
-            if( prodType != type ){
-                continue;
-            }
-            int stock = Integer.parseInt(prodAndStock[1].trim());
-            return count <= stock;
+        //Save the file content to the String "input"
+        String input = readFileIntoString();
+        //Look for product type
+        int iType = input.indexOf( type.name() );
+        if( iType <= -1 ){
+            return false;
         }
-        return false;
+        int iEndOfLine = input.indexOf(FileSystemUtils.NEWLINE, iType);
+        String lineToReplace = input.substring(iType, iEndOfLine);
+        String[] typeAndStock = lineToReplace.split( "=" );
+        if( typeAndStock.length != 2 ){
+            throw new InvalidObjectException(
+                "Bad stock file entry: " + lineToReplace
+            );
+        }
+        int stock = Integer.parseInt( typeAndStock[1].trim() );
+        if( count > stock ){
+            return false;
+        }
+        int iStock = input.indexOf( "=", iType ) + 1;
+        String toReplace = input.substring(iStock, iEndOfLine);
+        input = input.replace(
+            toReplace,
+            " " + Integer.toString(stock - count)
+        );
+        //Write the new String with the replaced line OVER the same file
+        FileOutputStream fileOut = new FileOutputStream(_filePath);
+        fileOut.write(input.getBytes());
+        fileOut.close();
+        return true;
+    }
+
+    private String readFileIntoString()
+            throws FileNotFoundException, IOException{
+        BufferedReader file = new BufferedReader(new FileReader(_filePath));
+        String line;
+        String input = "";
+        while ((line = file.readLine()) != null){
+            input += line + FileSystemUtils.NEWLINE;
+        }
+        file.close();
+        return input;
     }
 
 }

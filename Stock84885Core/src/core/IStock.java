@@ -13,6 +13,10 @@ import java.io.IOException;
  * @author dario
  */
 public interface IStock {
-    public boolean available( EProductType type, int count )
+
+    /*
+    * Returns false if there is not enough stock
+    */
+    public boolean decrement( EProductType type, int count )
             throws IOException;
 }

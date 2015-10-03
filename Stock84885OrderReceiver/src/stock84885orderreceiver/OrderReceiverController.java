@@ -94,7 +94,7 @@ public class OrderReceiverController {
             throws InterruptedException, IOException, TimeoutException {
         _logger.trace( _name + " received order: " + order.toString() );
         _orders.setState( order, EOrderState.RECEIVED );
-        boolean available = _stock.available(order.ProductType, order.Count);
+        boolean available = _stock.decrement(order.ProductType, order.Count);
         if( !available ){
             _orders.setState( order, EOrderState.REJECTED );
             sendOrderResultToCustomer( order.CustomerName,
