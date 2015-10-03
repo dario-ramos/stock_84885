@@ -1,0 +1,7 @@
+TYPE_A =4
+TYPE_B = 5
+TYPE_C = 20
+TYPE_D = 4
+TYPE_E = 6
+TYPE_F =4
+TYPE_G = 1

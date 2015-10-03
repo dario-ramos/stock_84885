@@ -1,0 +1,11 @@
+
+2015-10-03 03:42:06.644: Customer-28 generating order...
+2015-10-03 03:42:11.605: Customer-28 sent order Customer: Customer-28, Prod: TYPE_A, Count: 6
+2015-10-03 03:42:11.625: OrderReceiver-12 received order: Customer: Customer-28, Prod: TYPE_A, Count: 6
+2015-10-03 03:42:11.635: OrderReceiver-12 sending order result APPROVED to Customer-28
+2015-10-03 03:42:11.64: Customer-28 received order result: APPROVED
+2015-10-03 03:42:52.326: Customer-29 generating order...
+2015-10-03 03:42:55.96: Customer-29 sent order Customer: Customer-29, Prod: TYPE_F, Count: 4
+2015-10-03 03:42:55.96: OrderReceiver-12 received order: Customer: Customer-29, Prod: TYPE_F, Count: 4
+2015-10-03 03:42:55.975: OrderReceiver-12 sending order result APPROVED to Customer-29
+2015-10-03 03:42:55.98: Customer-29 received order result: APPROVED

@@ -1,0 +1,69 @@
+
+2015-10-02 22:15:46.269: Customer-9 generating order...
+2015-10-02 22:15:48.346: Customer-9 sent order Customer: Customer-9, Prod: TYPE_C, Count: 4
+2015-10-02 22:15:48.346: OrderReceiver-3 received order: Customer: Customer-9, Prod: TYPE_C, Count: 4
+2015-10-02 22:17:04.815: OrderReceiver-4 waiting for orders
+2015-10-02 22:17:09.143: Customer-10 generating order...
+2015-10-02 22:17:10.316: Customer-10 sent order Customer: Customer-10, Prod: TYPE_E, Count: 3
+2015-10-02 22:17:10.336: OrderReceiver-4 received order: Customer: Customer-10, Prod: TYPE_E, Count: 3
+2015-10-02 22:19:30.972: OrderReceiver-5 waiting for orders
+2015-10-02 22:19:34.638: Customer-11 generating order...
+2015-10-02 22:19:37.015: Customer-11 sent order Customer: Customer-11, Prod: TYPE_B, Count: 5
+2015-10-02 22:19:37.035: OrderReceiver-5 received order: Customer: Customer-11, Prod: TYPE_B, Count: 5
+2015-10-02 22:19:37.1: OrderReceiver-5 sending order result APPROVED
+2015-10-02 22:19:37.11: Customer-11 received order result: APPROVED
+2015-10-02 22:19:39.468: Customer-12 generating order...
+2015-10-02 22:19:42.202: Customer-12 sent order Customer: Customer-12, Prod: TYPE_D, Count: 8
+2015-10-02 22:19:42.202: OrderReceiver-5 received order: Customer: Customer-12, Prod: TYPE_D, Count: 8
+2015-10-02 22:19:42.292: OrderReceiver-5 sending order result REJECTED
+2015-10-02 22:19:42.297: Customer-12 received order result: REJECTED
+2015-10-02 22:20:05.449: Customer-13 generating order...
+2015-10-02 22:20:10.436: Customer-13 sent order Customer: Customer-13, Prod: TYPE_E, Count: 4
+2015-10-02 22:20:10.436: OrderReceiver-5 received order: Customer: Customer-13, Prod: TYPE_E, Count: 4
+2015-10-02 22:20:10.496: OrderReceiver-5 sending order result APPROVED
+2015-10-02 22:20:10.506: Customer-13 received order result: APPROVED
+2015-10-02 22:20:13.193: Customer-14 generating order...
+2015-10-02 22:20:15.398: Customer-14 sent order Customer: Customer-14, Prod: TYPE_D, Count: 7
+2015-10-02 22:20:15.398: OrderReceiver-5 received order: Customer: Customer-14, Prod: TYPE_D, Count: 7
+2015-10-02 22:20:15.443: OrderReceiver-5 sending order result REJECTED
+2015-10-02 22:20:15.453: Customer-14 received order result: REJECTED
+2015-10-03 00:46:40.051: OrderReceiver-6 waiting for orders
+2015-10-03 00:46:45.108: Customer-15 generating order...
+2015-10-03 00:46:45.682: Customer-15 sent order Customer: Customer-15, Prod: TYPE_B, Count: 4
+2015-10-03 00:46:45.707: OrderReceiver-6 received order: Customer: Customer-15, Prod: TYPE_B, Count: 4
+2015-10-03 00:46:45.707: OrderReceiver-6 sending order result APPROVED
+2015-10-03 00:46:45.712: Customer-15 received order result: APPROVED
+2015-10-03 00:47:06.603: Customer-16 generating order...
+2015-10-03 00:47:08.568: Customer-16 sent order Customer: Customer-16, Prod: TYPE_B, Count: 3
+2015-10-03 00:47:08.568: OrderReceiver-6 received order: Customer: Customer-16, Prod: TYPE_B, Count: 3
+2015-10-03 00:47:08.573: OrderReceiver-6 sending order result APPROVED
+2015-10-03 00:48:50.991: OrderReceiver-7 waiting for orders
+2015-10-03 00:48:54.894: Customer-17 generating order...
+2015-10-03 00:48:57.62: Customer-17 sent order Customer: Customer-17, Prod: TYPE_F, Count: 8
+2015-10-03 00:48:57.64: OrderReceiver-7 received order: Customer: Customer-17, Prod: TYPE_F, Count: 8
+2015-10-03 00:48:57.645: OrderReceiver-7 sending order result APPROVED to Customer-17
+2015-10-03 00:48:57.65: Customer-17 received order result: APPROVED
+2015-10-03 00:49:22.274: Customer-18 generating order...
+2015-10-03 00:49:23.862: Customer-18 sent order Customer: Customer-18, Prod: TYPE_A, Count: 2
+2015-10-03 00:49:23.862: OrderReceiver-7 received order: Customer: Customer-18, Prod: TYPE_A, Count: 2
+2015-10-03 00:49:23.867: OrderReceiver-7 sending order result APPROVED to Customer-18
+2015-10-03 00:53:09.752: Customer-19 generating order...
+2015-10-03 00:53:12.425: Customer-19 sent order Customer: Customer-19, Prod: TYPE_G, Count: 10
+2015-10-03 00:53:12.425: OrderReceiver-7 received order: Customer: Customer-19, Prod: TYPE_G, Count: 10
+2015-10-03 00:53:12.43: OrderReceiver-7 sending order result REJECTED to Customer-19
+2015-10-03 01:07:40.438: OrderReceiver-8 waiting for orders
+2015-10-03 01:07:44.379: Customer-20 generating order...
+2015-10-03 01:07:45.113: Customer-20 sent order Customer: Customer-20, Prod: TYPE_C, Count: 7
+2015-10-03 01:07:45.147: OrderReceiver-8 received order: Customer: Customer-20, Prod: TYPE_C, Count: 7
+2015-10-03 01:07:45.152: OrderReceiver-8 sending order result APPROVED to Customer-20
+2015-10-03 01:07:45.158: Customer-20 received order result: APPROVED
+2015-10-03 01:07:47.71: Customer-21 generating order...
+2015-10-03 01:07:48.142: Customer-21 sent order Customer: Customer-21, Prod: TYPE_E, Count: 8
+2015-10-03 01:07:48.144: OrderReceiver-8 received order: Customer: Customer-21, Prod: TYPE_E, Count: 8
+2015-10-03 01:07:48.148: OrderReceiver-8 sending order result REJECTED to Customer-21
+2015-10-03 01:07:48.157: Customer-21 received order result: REJECTED
+2015-10-03 01:07:51.135: Customer-22 generating order...
+2015-10-03 01:07:51.424: Customer-22 sent order Customer: Customer-22, Prod: TYPE_C, Count: 8
+2015-10-03 01:07:51.426: OrderReceiver-8 received order: Customer: Customer-22, Prod: TYPE_C, Count: 8
+2015-10-03 01:07:51.43: OrderReceiver-8 sending order result APPROVED to Customer-22
+2015-10-03 01:07:51.439: Customer-22 received order result: APPROVED
