@@ -3,15 +3,13 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package stock84885orderreceiver;
+package stock84885stockadmin;
 
 import core.Configuration;
 import core.FileLogger;
 import core.FileSystemUtils;
 import core.ILogger;
-import core.IOrders;
 import core.IStock;
-import core.OrdersFile;
 import core.StockFile;
 import java.io.File;
 import java.io.IOException;
@@ -20,7 +18,7 @@ import java.io.IOException;
  *
  * @author dario
  */
-public class Stock84885OrderReceiver {
+public class Stock84885StockAdmin {
 
     /**
      * @param args the command line arguments
@@ -30,7 +28,7 @@ public class Stock84885OrderReceiver {
         try{
             if( args.length != 1 ){
                 System.err.println( "Invalid parameters. "
-                                    + "Usage: Stock84885OrderReceiver <id>" );
+                                    + "Usage: Stock84885StockAdmin <id>" );
                 return;
             }
             int id = Integer.parseInt(args[0]);
@@ -44,10 +42,10 @@ public class Stock84885OrderReceiver {
             IStock stock = new StockFile(
                 currDirPrefix + "stock.txt", maxStock
             );
-            IOrders orders = new OrdersFile( currDirPrefix + "orders.txt" );
-            OrderReceiverController orderReceiver =
-                new OrderReceiverController(id, stock, orders, config, logger);
-            orderReceiver.run();
+            StockAdminController stockAdmin = new StockAdminController(
+                id, config, stock, logger
+            );
+            stockAdmin.run();
         }catch( Exception ex ){
             if( logger != null ){
                 try {

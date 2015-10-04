@@ -24,30 +24,43 @@ import java.nio.file.StandardOpenOption;
  */
 public class StockFile implements IStock {
 
+    private final int _maxStock;
     private final String _filePath;
     private final String _lockFilePath;
 
-    public StockFile( String filePath ){
+    public StockFile( String filePath, int maxStock ){
         _filePath = filePath;
         _lockFilePath = filePath + "_lock";
+        _maxStock = maxStock;
     }
 
     @Override
     public boolean decrement(Order.EProductType type, int count)
             throws IOException {
+        return changeStock( type, -count );
+    }
+
+    @Override
+    public boolean increment(Order.EProductType type, int count)
+            throws IOException {
+        return changeStock( type, count );
+    }
+    
+    private boolean changeStock( Order.EProductType type, int count )
+            throws IOException{
         Path path = Paths.get( _lockFilePath );
         boolean result = false;
-        try (FileChannel fileChannel = FileChannel.open(
-                path, StandardOpenOption.WRITE, StandardOpenOption.APPEND )){
+        try ( FileChannel fileChannel = FileChannel.open(
+              path, StandardOpenOption.WRITE, StandardOpenOption.APPEND )){
             FileLock lock = fileChannel.lock();
-            result = doReduce( type, count );
+            result = doChangeStock( type, count );
             lock.release();
             fileChannel.close();
         }
         return result;
     }
 
-    private boolean doReduce(Order.EProductType type, int count)
+    private boolean doChangeStock(Order.EProductType type, int delta)
             throws IOException{
         //Save the file content to the String "input"
         String input = readFileIntoString();
@@ -65,14 +78,13 @@ public class StockFile implements IStock {
             );
         }
         int stock = Integer.parseInt( typeAndStock[1].trim() );
-        if( count > stock ){
+        if( stock + delta < 0 || stock + delta > _maxStock ){
             return false;
         }
         int iStock = input.indexOf( "=", iType ) + 1;
         String toReplace = input.substring(iStock, iEndOfLine);
-        input = input.replace(
-            toReplace,
-            " " + Integer.toString(stock - count)
+        input = input.replace(toReplace,
+            " " + Integer.toString(stock + delta)
         );
         //Write the new String with the replaced line OVER the same file
         FileOutputStream fileOut = new FileOutputStream(_filePath);

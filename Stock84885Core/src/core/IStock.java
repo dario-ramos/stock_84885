@@ -19,4 +19,9 @@ public interface IStock {
     */
     public boolean decrement( EProductType type, int count )
             throws IOException;
+    /*
+    * Returns false if incrementing would go over maximum
+    */
+    public boolean increment( EProductType type, int count )
+            throws IOException;
 }

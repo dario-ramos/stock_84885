@@ -31,6 +31,7 @@ public class Configuration {
         "max_order_generation_delay";
     public static final String MAX_ORDER_PRODUCT_COUNT =
         "max_order_product_count";
+    public static final String MAX_STOCK = "max_stock";
     public static final String ORDER_RECEIVER_HOSTNAME =
         "order_receiver_hostname";
     public static final String ORDERS_EXCHANGE_NAME = "orders_exchange_name";

@@ -96,7 +96,11 @@ public class CustomerController {
         if( orderResult.equals(EOrderState.REJECTED.name()) ){
             _deliveryChannel.basicCancel( _deliveryConsumerTag );
             _deliveryChannel.close();
+            return;
         }
+        _deliveryConsumerTag = _deliveryChannel.basicConsume(
+            _deliveryQueueName, false, _deliveryConsumer
+        );
     }
 
     private void initResultChannel() throws IOException, TimeoutException{
@@ -152,9 +156,6 @@ public class CustomerController {
             connection.close();
           }
         };
-        _deliveryConsumerTag = _deliveryChannel.basicConsume(
-            _deliveryQueueName, false, _deliveryConsumer
-        );
     }
 
     private void sendOrder() throws IOException,
