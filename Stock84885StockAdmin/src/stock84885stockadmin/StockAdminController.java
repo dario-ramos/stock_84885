@@ -47,8 +47,14 @@ public class StockAdminController {
         //Now decide whether to increment or decrement
         boolean increment = (random.nextInt() % 2 == 0);
         if( increment ){
+            _logger.trace(
+                _name + " will increment " + type.name() + " by " + count
+            );
             _stock.increment(type, count);
         }else{
+            _logger.trace(
+                _name + " will decrement " + type.name() + " by " + count
+            );
             _stock.decrement(type, count);
         }
     }
