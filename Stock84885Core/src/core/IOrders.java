@@ -7,12 +7,15 @@ package core;
 
 import core.Order.EOrderState;
 import java.io.IOException;
+import java.util.List;
 
 /**
  *
  * @author dario
  */
 public interface IOrders {
+    public List<Order> getOrdersByUserName( String userName )
+        throws IOException;
     public void create( Order order, EOrderState initialState )
         throws IOException;
     public void setState( Order order, EOrderState state )

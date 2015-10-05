@@ -83,7 +83,6 @@ public class OrderReceiverController {
                 false, //Non-exclusive queue
                 null    //No arguments
         );
-        System.out.println(" [*] Waiting for orders. To exit press CTRL+C");
         _logger.trace( _name + " waiting for orders" );
         ordersChannel.basicQos(1);
         final Consumer consumer = new DefaultConsumer(ordersChannel) {

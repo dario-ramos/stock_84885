@@ -35,6 +35,11 @@ public class Configuration {
     public static final String ORDER_RECEIVER_HOSTNAME =
         "order_receiver_hostname";
     public static final String ORDERS_EXCHANGE_NAME = "orders_exchange_name";
+    public static final String QUERIES_EXCHANGE_NAME = "queries_exchange_name";
+    public static final String QUERIES_RESULTS_EXCHANGE_NAME = 
+        "queries_results_exchange_name";
+    public static final String QUERY_HANDLER_HOSTNAME =
+        "query_handler_hostname";
     public static final String RESULTS_EXCHANGE_NAME = "results_exchange_name";
     public static final String SHIPPING_EXCHANGE_NAME =
         "shipping_exchange_name";
@@ -53,7 +58,7 @@ public class Configuration {
             _props.load(input);
         }
     }
-    
+
     public List<String> getMultivaluedProperty( String key ){
         String s = _props.getProperty(key);
         return Arrays.asList( s.split(",") );

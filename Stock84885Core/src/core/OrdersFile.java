@@ -5,6 +5,8 @@
  */
 package core;
 
+import core.Order.EOrderState;
+import core.Order.EProductType;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -16,6 +18,8 @@ import java.nio.channels.FileLock;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -26,10 +30,36 @@ public class OrdersFile implements IOrders{
 
     private final String _filePath;
     private final String _lockFilePath;
+    private static final String FIELD_SEPARATOR = "|";
 
     public OrdersFile( String filePath ){
         _filePath = filePath;
         _lockFilePath = filePath + "_lock";
+    }
+
+    @Override
+    public List<Order> getOrdersByUserName(String userName)
+            throws IOException {
+        List<Order> orders = new ArrayList<Order>();
+        Path path = Paths.get( _lockFilePath );
+        try ( FileChannel fileChannel = FileChannel.open(
+              path, StandardOpenOption.WRITE, StandardOpenOption.APPEND )){
+            FileLock lock = fileChannel.lock();
+            //Save the file content to the String "input"
+            BufferedReader file = new BufferedReader(new FileReader(_filePath));
+            String line;
+            String input = "";
+            while ((line = file.readLine()) != null){
+                if( !line.startsWith(userName + FIELD_SEPARATOR) ){
+                    continue;
+                }
+                orders.add( fileLineToOrder(line) );
+            }
+            file.close();
+            lock.release();
+            fileChannel.close();
+        }
+        return orders;
     }
 
     @Override
@@ -49,7 +79,8 @@ public class OrdersFile implements IOrders{
             file.close();
             //Add new order
             order.setID( UUID.randomUUID().toString() );
-            input += orderToFileLine( order, initialState );
+            order.State = initialState;
+            input += orderToFileLine( order );
             //Write the new String with the replaced line OVER the same file
             FileOutputStream fileOut = new FileOutputStream(_filePath);
             fileOut.write(input.getBytes());
@@ -85,12 +116,26 @@ public class OrdersFile implements IOrders{
         }
     }
 
-    private String orderToFileLine( Order order, Order.EOrderState state ){
-        return order.getID() + "|" +
-               order.CustomerName + "|" +
-               order.ProductType + "|" +
-               order.Count + "|" +
-               state.name();
+    private Order fileLineToOrder( String line ) throws InvalidObjectException{
+        String[] fields = line.split( FIELD_SEPARATOR );
+        if( fields.length != 5 ){
+            throw new InvalidObjectException( "Invalid order entry: " + line );
+        }
+        Order order = new Order();
+        order.setID(fields[0]);
+        order.CustomerName = fields[1];
+        order.ProductType = EProductType.valueOf( fields[2] );
+        order.Count = Integer.parseInt( fields[3] );
+        order.State = EOrderState.valueOf( fields[4] );
+        return order;
+    }
+
+    private String orderToFileLine( Order order ){
+        return order.getID() + FIELD_SEPARATOR +
+               order.CustomerName + FIELD_SEPARATOR +
+               order.ProductType + FIELD_SEPARATOR +
+               order.Count + FIELD_SEPARATOR +
+               order.State.name();
     }
 
     private void doSetState(Order order, Order.EOrderState state)
@@ -113,8 +158,9 @@ public class OrdersFile implements IOrders{
             FileSystemUtils.NEWLINE, iOrderId
         );
         String lineToReplace = input.substring(iOrderId, iEndOfLine);
+        order.State = state;
         input = input.replace(
-            lineToReplace, orderToFileLine( order, state )
+            lineToReplace, orderToFileLine( order )
         );
         //Write the new String with the replaced line OVER the same file
         FileOutputStream fileOut = new FileOutputStream(_filePath);
