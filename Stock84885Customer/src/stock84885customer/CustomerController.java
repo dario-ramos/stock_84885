@@ -45,7 +45,8 @@ public class CustomerController {
     private String _deliveryQueueName;
     private String _resultQueueName;
 
-    public CustomerController( int id, Configuration config, ILogger logger ){
+    public CustomerController( int id, 
+                               Configuration config, ILogger logger ){
         _id = id;
         _ordersExchangeName = config.getProperty(
             Configuration.ORDERS_EXCHANGE_NAME

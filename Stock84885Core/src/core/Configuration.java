@@ -23,6 +23,8 @@ import java.util.Properties;
 public class Configuration {
     private static final String CONFIG_FILE_NAME = "config.properties";
     public static final String CUSTOMER_HOSTNAME = "customer_hostname";
+    public static final String CUSTOMER_QUERY_HOSTNAME =
+        "customer_query_hostname";
     public static final String DELIVERY_EXCHANGE_NAME =
         "delivery_exchange_name";
     public static final String MAX_ORDER_DELIVERY_DELAY = 
