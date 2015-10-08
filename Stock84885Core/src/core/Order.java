@@ -5,7 +5,9 @@
  */
 package core;
 
+import java.io.InvalidObjectException;
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -16,7 +18,7 @@ import org.apache.commons.lang3.SerializationUtils;
  *
  * @author dario
  */
-public class Order implements Serializable{
+public class Order{
 
     public enum EOrderState{
         RECEIVED,
@@ -49,13 +51,22 @@ public class Order implements Serializable{
     private String _id;
     public int Count;
     public EOrderState State;
+    //private static long serialVersionUID = -2031969733962027974L;
+    private static final String FIELD_SEPARATOR = "|";
 
     public Order(){
         _id = "";
     }
 
+    //Had to do this because serialize broke down after adding a field
+    //It gave "local class incompatible" error
     public byte[] serialize(){
-        return SerializationUtils.serialize(this);
+        String s = CustomerName + FIELD_SEPARATOR +
+                   ProductType.name() + FIELD_SEPARATOR +
+                   _id + FIELD_SEPARATOR +
+                   Integer.toString(Count) + FIELD_SEPARATOR +
+                   State.name();
+        return s.getBytes();
     }
 
     public String getID(){
@@ -73,7 +84,19 @@ public class Order implements Serializable{
                ", Count: " + Count; 
     }
 
-    public static Order deserialize( byte[] bytes ){
-        return (Order) SerializationUtils.deserialize( bytes );
+    public static Order deserialize( byte[] bytes )
+            throws UnsupportedEncodingException, InvalidObjectException{
+        String s = new String( bytes, "UTF-8" );
+        String[] fields = s.split( FIELD_SEPARATOR );
+        if( fields.length != 5 ){
+            throw new InvalidObjectException( "Bad order: " + s );
+        }
+        Order o = new Order();
+        o.CustomerName = fields[0];
+        o.ProductType = EProductType.valueOf(fields[1]);
+        o._id = fields[2];
+        o.Count = Integer.parseInt( fields[3] );
+        o.State = EOrderState.valueOf(fields[4]);
+        return o;
     }
 }

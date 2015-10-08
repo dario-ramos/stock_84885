@@ -9,4 +9,4 @@ count = int(sys.argv[1]) + 1
 classpath = os.getcwd() + os.path.sep + "*"
 for x in range(1, count):
     print "Launching order receiver %d..." % (x)
-    subprocess.Popen(["java","-cp",classpath,"stock84885orderreceiver.Stock84885OrderReceiver",str(x)])
+    subprocess.Popen(["java","-cp",classpath,"stock84885customer.Stock84885Customer",str(x),"query"])

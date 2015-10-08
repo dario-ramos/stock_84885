@@ -6,6 +6,7 @@
 package stock84885shipping;
 
 import core.Configuration;
+import core.ConsoleLogger;
 import core.FileLogger;
 import core.FileSystemUtils;
 import core.ILogger;
@@ -38,7 +39,7 @@ public class Stock84885Shipping {
                                    File.separator;
             Configuration config = new Configuration();
             IOrders orders = new OrdersFile( currDirPrefix + "orders.txt" );
-            logger = new FileLogger( currDirPrefix + "log.txt" );
+            logger = new ConsoleLogger( currDirPrefix + "sh_console_lock.txt" );
             ShippingController shipping = new ShippingController(
                 id, orders, config, logger
             );

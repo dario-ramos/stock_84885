@@ -6,6 +6,7 @@
 package stock84885stockadmin;
 
 import core.Configuration;
+import core.ConsoleLogger;
 import core.FileLogger;
 import core.FileSystemUtils;
 import core.ILogger;
@@ -35,7 +36,7 @@ public class Stock84885StockAdmin {
             Configuration config = new Configuration();
             String currDirPrefix = FileSystemUtils.getCurrentDir() +
                                    File.separator;
-            logger = new FileLogger( currDirPrefix + "log.txt" );
+            logger = new ConsoleLogger( currDirPrefix + "sa_console_lock.txt" );
             int maxStock = Integer.parseInt(
                 config.getProperty( Configuration.MAX_STOCK )
             );

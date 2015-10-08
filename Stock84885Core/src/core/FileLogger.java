@@ -5,6 +5,7 @@
  */
 package core;
 
+import static core.FileSystemUtils.NEWLINE;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -23,11 +24,9 @@ import java.util.Date;
 public class FileLogger implements ILogger {
 
     private final String _filePath;
-    private final String _lineSeparator;
 
     public FileLogger( String logFilePath ) throws FileNotFoundException{
         _filePath = logFilePath;
-        _lineSeparator = System.getProperty( "line.separator" );
     }
 
     @Override
@@ -37,7 +36,7 @@ public class FileLogger implements ILogger {
 
     @Override
     public void trace(String msg) throws IOException {
-        msg = getTimeStamp() + ": " + msg + _lineSeparator;
+        msg = DateUtils.getTimeStamp() + ": " + msg + NEWLINE;
         Path path = Paths.get( _filePath );
         try (FileChannel fileChannel = FileChannel.open(
                 path, StandardOpenOption.WRITE, StandardOpenOption.APPEND )) {
@@ -55,9 +54,5 @@ public class FileLogger implements ILogger {
         }
     }
 
-    private String getTimeStamp(){
-        Date date= new Date();
-        return new Timestamp(date.getTime()).toString();
-    }
 
 }

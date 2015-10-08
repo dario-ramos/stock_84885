@@ -6,6 +6,7 @@
 package stock84885orderreceiver;
 
 import core.Configuration;
+import core.ConsoleLogger;
 import core.FileLogger;
 import core.FileSystemUtils;
 import core.ILogger;
@@ -26,7 +27,8 @@ public class Stock84885OrderReceiver {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        ILogger logger = null;
+        ILogger traceLogger = null;
+        ILogger auditLogger = null;
         try{
             if( args.length != 1 ){
                 System.err.println( "Invalid parameters. "
@@ -37,7 +39,12 @@ public class Stock84885OrderReceiver {
             Configuration config = new Configuration();
             String currDirPrefix = FileSystemUtils.getCurrentDir() +
                                    File.separator;
-            logger = new FileLogger( currDirPrefix + "log.txt" );
+            traceLogger = new ConsoleLogger(
+                currDirPrefix + "or_console_lock.txt"
+            );
+            auditLogger = new FileLogger(
+                currDirPrefix + "log.txt"
+            );
             int maxStock = Integer.parseInt(
                 config.getProperty( Configuration.MAX_STOCK )
             );
@@ -46,12 +53,14 @@ public class Stock84885OrderReceiver {
             );
             IOrders orders = new OrdersFile( currDirPrefix + "orders.txt" );
             OrderReceiverController orderReceiver =
-                new OrderReceiverController(id, stock, orders, config, logger);
+                new OrderReceiverController(
+                        id, stock, orders, config, traceLogger, auditLogger
+                );
             orderReceiver.run();
         }catch( Exception ex ){
-            if( logger != null ){
+            if( traceLogger != null ){
                 try {
-                    logger.error( ex.toString() );
+                    traceLogger.error( ex.toString() );
                 } catch (IOException ex1) {
                     System.err.println( ex1 );
                     ex1.printStackTrace(System.err);

@@ -30,7 +30,8 @@ public class OrderReceiverController {
 
     private Channel _resultsChannel;
     private Channel _shippingChannel;
-    private final ILogger _logger;
+    private final ILogger _auditLogger;
+    private final ILogger _traceLogger;
     private final IOrders _orders;
     private final IStock _stock;
     private final String _hostName;
@@ -42,7 +43,8 @@ public class OrderReceiverController {
     public OrderReceiverController( int id,
                                     IStock stock, 
                                     IOrders orders,
-                                    Configuration config, ILogger logger ){
+                                    Configuration config, ILogger traceLogger,
+                                    ILogger auditLogger ){
         _ordersExchangeName = config.getProperty(
             Configuration.ORDERS_EXCHANGE_NAME
         );
@@ -56,7 +58,8 @@ public class OrderReceiverController {
             Configuration.ORDER_RECEIVER_HOSTNAME
         );
         _name = "OrderReceiver-" + id;
-        _logger = logger;
+        _traceLogger = traceLogger;
+        _auditLogger = auditLogger;
         _stock = stock;
         _orders = orders;
     }
@@ -83,7 +86,7 @@ public class OrderReceiverController {
                 false, //Non-exclusive queue
                 null    //No arguments
         );
-        _logger.trace( _name + " waiting for orders" );
+        _traceLogger.trace( _name + " waiting for orders" );
         ordersChannel.basicQos(1);
         final Consumer consumer = new DefaultConsumer(ordersChannel) {
           @Override
@@ -95,7 +98,7 @@ public class OrderReceiverController {
             try {
                 processOrder(order);
             } catch (InterruptedException | TimeoutException ex) {
-                _logger.error( ex.toString() );
+                _traceLogger.error( ex.toString() );
             } finally {
                 ordersChannel.basicAck(envelope.getDeliveryTag(), false);
             }
@@ -106,7 +109,8 @@ public class OrderReceiverController {
 
     private void processOrder(Order order)
             throws InterruptedException, IOException, TimeoutException {
-        _logger.trace( _name + " received order: " + order.toString() );
+        _traceLogger.trace( _name + " received order: " + order.toString() );
+        _auditLogger.trace( _name + " received order: " + order.toString() );
         _orders.create( order, EOrderState.RECEIVED );
         boolean available = _stock.decrement(order.ProductType, order.Count);
         if( !available ){
@@ -124,8 +128,8 @@ public class OrderReceiverController {
     private void sendOrderResultToCustomer( String customerName,
                                             String result )
             throws IOException, TimeoutException{
-        _logger.trace( _name + " sending order result " + result + " to " +
-                       customerName );
+        _traceLogger.trace( _name + " sending order result " + result + " to " +
+                            customerName );
         _resultsChannel.basicPublish(
             _resultsExchangeName,
             customerName,
@@ -135,7 +139,7 @@ public class OrderReceiverController {
     }
 
     private void sendOrderToShipping( Order order ) throws IOException{
-        _logger.trace(
+        _traceLogger.trace(
             _name + " sending order " + order.getID() + " to Shipping"
         );
         _shippingChannel.basicPublish(

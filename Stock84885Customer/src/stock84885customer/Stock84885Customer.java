@@ -6,6 +6,7 @@
 package stock84885customer;
 
 import core.Configuration;
+import core.ConsoleLogger;
 import core.FileLogger;
 import core.ILogger;
 import java.io.IOException;
@@ -33,7 +34,7 @@ public class Stock84885Customer {
             }
             int id = Integer.parseInt(args[0]);
             Configuration config = new Configuration();
-            logger = new FileLogger("log.txt");
+            logger = new ConsoleLogger("cu_console_lock.txt");
             runCommand( args[1], id, config, logger );
         }catch( Exception ex ){
             if( logger != null ){

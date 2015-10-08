@@ -6,6 +6,7 @@
 package stock84885queryhandler;
 
 import core.Configuration;
+import core.ConsoleLogger;
 import core.FileLogger;
 import core.FileSystemUtils;
 import core.ILogger;
@@ -35,7 +36,7 @@ public class Stock84885QueryHandler {
             Configuration config = new Configuration();
             String currDirPrefix = FileSystemUtils.getCurrentDir() +
                                    File.separator;
-            logger = new FileLogger( currDirPrefix + "log.txt" );
+            logger = new ConsoleLogger( currDirPrefix + "qh_console_lock.txt" );
             IOrders orders = new OrdersFile(
                 currDirPrefix + "orders.txt"
             );
