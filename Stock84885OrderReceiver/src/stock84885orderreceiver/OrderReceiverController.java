@@ -21,6 +21,8 @@ import core.Order;
 import core.Order.EOrderState;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -28,8 +30,11 @@ import java.util.concurrent.TimeoutException;
  */
 public class OrderReceiverController {
 
+    private Channel _ordersChannel;
     private Channel _resultsChannel;
     private Channel _shippingChannel;
+    private Connection _connection;
+    private ConnectionFactory _connFactory;
     private final ILogger _auditLogger;
     private final ILogger _traceLogger;
     private final IOrders _orders;
@@ -65,46 +70,68 @@ public class OrderReceiverController {
     }
 
     public void run() throws IOException, TimeoutException{
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost(_hostName);
-        final Connection connection = factory.newConnection();
-        final Channel ordersChannel = connection.createChannel();
-        _resultsChannel = connection.createChannel();
-        _shippingChannel = connection.createChannel();
-        ordersChannel.queueDeclare(
-            _ordersExchangeName,
-            true, //Passive declaration
-            false, //Non-durable queue
-            false, //Non-exclusive queue
-            null //No arguments
-        );
-        _resultsChannel.exchangeDeclare(_resultsExchangeName, "direct");
-        _shippingChannel.queueDeclare(
+        try{
+            _connFactory = new ConnectionFactory();
+            _connFactory.setHost(_hostName);
+            _connection = _connFactory.newConnection();
+            _ordersChannel = _connection.createChannel();
+            _resultsChannel = _connection.createChannel();
+            _shippingChannel = _connection.createChannel();
+            _ordersChannel.queueDeclare(
+                _ordersExchangeName,
+                true, //Passive declaration
+                false, //Non-durable queue
+                false, //Non-exclusive queue
+                null //No arguments
+            );
+            _resultsChannel.exchangeDeclare(_resultsExchangeName, "direct");
+            _shippingChannel.queueDeclare(
                 _shippingExchangeName,
                 true, //Passive declaration
                 false, //Non-durable queue
                 false, //Non-exclusive queue
                 null    //No arguments
-        );
-        _traceLogger.trace( _name + " waiting for orders" );
-        ordersChannel.basicQos(1);
-        final Consumer consumer = new DefaultConsumer(ordersChannel) {
-          @Override
-          public void handleDelivery(String consumerTag,
-                                     Envelope envelope,
-                                     AMQP.BasicProperties properties,
-                                     byte[] body) throws IOException {
-            Order order = Order.deserialize( body );
-            try {
-                processOrder(order);
-            } catch (InterruptedException | TimeoutException ex) {
-                _traceLogger.error( ex.toString() );
-            } finally {
-                ordersChannel.basicAck(envelope.getDeliveryTag(), false);
-            }
-          }
-        };
-        ordersChannel.basicConsume( _ordersExchangeName, false, consumer);
+            );
+            _traceLogger.trace( _name + " waiting for orders" );
+            _ordersChannel.basicQos(1);
+            final Consumer consumer = new DefaultConsumer(_ordersChannel) {
+                @Override
+                public void handleDelivery(String consumerTag,
+                                           Envelope envelope,
+                                           AMQP.BasicProperties properties,
+                                           byte[] body) throws IOException {
+                    Order order = Order.deserialize( body );
+                    try {
+                        processOrder(order);
+                    } catch (InterruptedException | TimeoutException ex) {
+                        _traceLogger.error( ex.toString() );
+                    } finally {
+                        _ordersChannel.basicAck(
+                            envelope.getDeliveryTag(), false
+                        );
+                    }
+                }
+            };
+            _ordersChannel.basicConsume(
+                _ordersExchangeName, false, consumer
+            );
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+                public void run() {
+                    try {
+                        releaseNetworkResources();
+                    } catch (IOException | TimeoutException ex) {
+                        try {
+                            _traceLogger.error( ex.toString() );
+                        } catch (IOException ex1) {
+                            System.err.println( ex1.toString() );
+                        }
+                    }
+                }
+             });
+        }catch( IOException | TimeoutException e ){
+            releaseNetworkResources();
+            throw e;
+        }
     }
 
     private void processOrder(Order order)
@@ -123,6 +150,26 @@ public class OrderReceiverController {
         sendOrderResultToCustomer( order.CustomerName,
                                    EOrderState.APPROVED.name() );
         sendOrderToShipping( order );
+    }
+
+    private void releaseNetworkResources() throws IOException,
+                                                  TimeoutException{
+        if( _ordersChannel != null ){
+            _ordersChannel.close();
+            _ordersChannel = null;
+        }
+        if( _resultsChannel != null ){
+            _ordersChannel.close();
+            _ordersChannel = null;
+        }
+        if( _shippingChannel != null ){
+            _shippingChannel.close();
+            _shippingChannel = null;
+        }
+        if( _connection != null ){
+            _connection.close();
+            _connection = null;
+        }
     }
 
     private void sendOrderResultToCustomer( String customerName,

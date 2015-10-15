@@ -21,6 +21,8 @@ import core.Order.EProductType;
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -30,6 +32,9 @@ public class CustomerController {
 
     private Channel _deliveryChannel;
     private Channel _resultChannel;
+    private Channel _ordersChannel;
+    private Connection _connection;
+    private ConnectionFactory _connFactory;
     private Consumer _deliveryConsumer;
     private Consumer _resultConsumer;
     private final ILogger _logger;
@@ -72,10 +77,20 @@ public class CustomerController {
 
     public void run()
             throws IOException, TimeoutException, InterruptedException{
-        initResultChannel();
-        initDeliveryChannel();
-        sendOrder();
-        _resultChannel.basicConsume( _resultQueueName, false, _resultConsumer);
+        try{
+            _connFactory = new ConnectionFactory();
+            _connFactory.setHost(_hostName);
+            _connection = _connFactory.newConnection();
+            initResultChannel();
+            initDeliveryChannel();
+            sendOrder();
+            _resultChannel.basicConsume(
+                _resultQueueName, false, _resultConsumer
+            );
+        }catch( IOException | TimeoutException e ){
+            releaseNetworkResources();
+            throw e;
+        }
     }
 
     private Order generateOrder() throws IOException, InterruptedException{
@@ -105,10 +120,7 @@ public class CustomerController {
     }
 
     private void initResultChannel() throws IOException, TimeoutException{
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost(_hostName);
-        final Connection connection = factory.newConnection();
-        _resultChannel = connection.createChannel();
+        _resultChannel = _connection.createChannel();
         _resultChannel.exchangeDeclare( _resultsExchangeName, "direct" );
         _resultQueueName = _resultChannel.queueDeclare().getQueue();
         _resultChannel.queueBind(
@@ -126,16 +138,12 @@ public class CustomerController {
             } catch (Exception ex) {
                 _logger.error( ex.toString() );
             }
-            connection.close();
           }
         };
     }
 
     private void initDeliveryChannel() throws IOException, TimeoutException{
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost(_hostName);
-        final Connection connection = factory.newConnection();
-        _deliveryChannel = connection.createChannel();
+        _deliveryChannel = _connection.createChannel();
         _deliveryChannel.exchangeDeclare( _deliveryExchangeName, "direct" );
         _deliveryQueueName = _deliveryChannel.queueDeclare().getQueue();
         _deliveryChannel.queueBind(
@@ -154,18 +162,34 @@ public class CustomerController {
             } catch (TimeoutException ex) {
                 _logger.error( ex.toString() );
             }
-            connection.close();
           }
         };
     }
 
-    private void sendOrder() throws IOException,
-                                    TimeoutException, InterruptedException{
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost(_hostName);
-        Connection connection = factory.newConnection();
-        Channel channel = connection.createChannel();
-        channel.queueDeclare(
+    private void releaseNetworkResources() throws IOException,
+                                                  TimeoutException{
+        if( _ordersChannel != null ){
+            _ordersChannel.close();
+            _ordersChannel = null;
+        }
+        if( _resultChannel != null ){
+            _resultChannel.close();
+            _resultChannel = null;
+        }
+        if( _deliveryChannel != null ){
+            _deliveryChannel.close();
+            _deliveryChannel = null;
+        }
+        if( _connection != null ){
+            _connection.close();
+            _connection = null;
+        }
+    }
+
+    private void sendOrder() throws InterruptedException, IOException,
+                                    TimeoutException{
+        _ordersChannel = _connection.createChannel();
+        _ordersChannel.queueDeclare(
                 _ordersExchangeName,
                 true, //Passive declaration
                 false, //Non-durable queue
@@ -173,13 +197,12 @@ public class CustomerController {
                 null    //No arguments
         );
         Order order = generateOrder();
-        channel.basicPublish( "",
+        _ordersChannel.basicPublish( "",
                               _ordersExchangeName,
                               MessageProperties.PERSISTENT_TEXT_PLAIN,
                               order.serialize());
         _logger.trace( _name + " sent order " + order.toString() );
-        channel.close();
-        connection.close();
+        releaseNetworkResources();
     }
 
 }

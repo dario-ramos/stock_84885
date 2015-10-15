@@ -29,6 +29,9 @@ import java.util.concurrent.TimeoutException;
 public class ShippingController {
 
     private Channel _deliveryChannel;
+    private Channel _shippingChannel;
+    private ConnectionFactory _connFactory;
+    private Connection _connection;
     private final ILogger _logger;
     private final int _maxOrderDeliveryDelay;
     private final IOrders _orders;
@@ -56,38 +59,56 @@ public class ShippingController {
 
     public void run() throws URISyntaxException,
                              IOException, TimeoutException{
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost(_hostName);
-        final Connection connection = factory.newConnection();
-        final Channel shippingChannel = connection.createChannel();
-        _deliveryChannel = connection.createChannel();
-        shippingChannel.queueDeclare(_shippingExchangeName,
-            true, //Passive declaration
-            false, //Non-durable queue
-            false, //Non-exclusive queue
-            null //No arguments
-        );
-        _deliveryChannel.exchangeDeclare(_deliveryExchangeName, "direct");
-        _logger.trace( _name + " waiting for orders" );
-        shippingChannel.basicQos(1);
-        final Consumer consumer = new DefaultConsumer(shippingChannel) {
-          @Override
-          public void handleDelivery(String consumerTag,
-                                     Envelope envelope,
-                                     AMQP.BasicProperties properties,
-                                     byte[] body) throws IOException {
-              Order order = Order.deserialize(body);
-              _logger.trace( _name + " received order " + order.getID() );
-              try {
-                  deliverOrder(order);
-              } catch (Exception ex) {
-                  _logger.error( ex.toString() );
+        try{
+            _connFactory = new ConnectionFactory();
+            _connFactory.setHost(_hostName);
+            _connection = _connFactory.newConnection();
+            _shippingChannel = _connection.createChannel();
+            _deliveryChannel = _connection.createChannel();
+            _shippingChannel.queueDeclare(_shippingExchangeName,
+                true, //Passive declaration
+                false, //Non-durable queue
+                false, //Non-exclusive queue
+                null //No arguments
+            );
+            _deliveryChannel.exchangeDeclare(_deliveryExchangeName, "direct");
+            _logger.trace( _name + " waiting for orders" );
+            _shippingChannel.basicQos(1);
+            final Consumer consumer = new DefaultConsumer(_shippingChannel) {
+              @Override
+              public void handleDelivery(String consumerTag,
+                                         Envelope envelope,
+                                         AMQP.BasicProperties properties,
+                                         byte[] body) throws IOException {
+                  Order order = Order.deserialize(body);
+                  _logger.trace( _name + " received order " + order.getID() );
+                  try {
+                      deliverOrder(order);
+                  } catch (Exception ex) {
+                      _logger.error( ex.toString() );
+                  }
               }
-          }
-        };
-        shippingChannel.basicConsume(
-            _shippingExchangeName, false, consumer
-        );
+            };
+            _shippingChannel.basicConsume(
+                _shippingExchangeName, false, consumer
+            );
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+                public void run() {
+                    try {
+                        releaseNetworkResources();
+                    } catch (IOException | TimeoutException ex) {
+                        try {
+                            _logger.error( ex.toString() );
+                        } catch (IOException ex1) {
+                            System.err.println( ex1.toString() );
+                        }
+                    }
+                }
+             });
+        }catch( IOException | TimeoutException e ){
+            releaseNetworkResources();
+            throw e;
+        }
     }
 
     private void deliverOrder( Order order )
@@ -104,4 +125,21 @@ public class ShippingController {
         );
         _orders.setState(order, Order.EOrderState.DELIVERED);
     }
+
+    private void releaseNetworkResources() throws IOException,
+                                           TimeoutException{
+        if( _deliveryChannel != null ){
+            _deliveryChannel.close();
+            _deliveryChannel = null;
+        }
+        if( _shippingChannel != null ){
+            _shippingChannel.close();
+            _shippingChannel = null;
+        }
+        if( _connection != null ){
+            _connection.close();
+            _connection = null;
+        }
+    }
+
 }

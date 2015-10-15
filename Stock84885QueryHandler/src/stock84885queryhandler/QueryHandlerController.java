@@ -28,7 +28,10 @@ import java.util.concurrent.TimeoutException;
  */
 public class QueryHandlerController {
 
+    private Channel _queriesChannel;
     private Channel _queriesResultsChannel;
+    private ConnectionFactory _connFactory;
+    private Connection _connection;
     private final ILogger _logger;
     private final IOrders _orders;
     private final String _hostName;
@@ -51,40 +54,60 @@ public class QueryHandlerController {
     }
 
     public void run() throws IOException, TimeoutException{
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setHost(_hostName);
-        final Connection connection = factory.newConnection();
-        final Channel queriesChannel = connection.createChannel();
-        _queriesResultsChannel = connection.createChannel();
-        queriesChannel.queueDeclare(
-            _queriesExchangeName,
-            true, //Passive declaration
-            false, //Non-durable queue
-            false, //Non-exclusive queue
-            null //No arguments
-        );
-        _queriesResultsChannel.exchangeDeclare(
-            _queriesResultsExchangeName, "direct"
-        );
-        _logger.trace( _name + " waiting for queries..." );
-        queriesChannel.basicQos(1);
-        final Consumer consumer = new DefaultConsumer(queriesChannel) {
-          @Override
-          public void handleDelivery(String consumerTag,
-                                     Envelope envelope,
-                                     AMQP.BasicProperties properties,
-                                     byte[] body) throws IOException {
-            String userName = new String( body, "UTF-8" );
-            try {
-                processQuery( userName );
-            } catch (Exception ex) {
-                _logger.error( ex.toString() );
-            } finally {
-                queriesChannel.basicAck(envelope.getDeliveryTag(), false);
-            }
-          }
-        };
-        queriesChannel.basicConsume( _queriesExchangeName, false, consumer);
+        try{
+            _connFactory = new ConnectionFactory();
+            _connFactory.setHost(_hostName);
+            _connection = _connFactory.newConnection();
+            _queriesChannel = _connection.createChannel();
+            _queriesResultsChannel = _connection.createChannel();
+            _queriesChannel.queueDeclare(
+                _queriesExchangeName,
+                true, //Passive declaration
+                false, //Non-durable queue
+                false, //Non-exclusive queue
+                null //No arguments
+            );
+            _queriesResultsChannel.exchangeDeclare(
+                _queriesResultsExchangeName, "direct"
+            );
+            _logger.trace( _name + " waiting for queries..." );
+            _queriesChannel.basicQos(1);
+            final Consumer consumer = new DefaultConsumer(_queriesChannel) {
+              @Override
+              public void handleDelivery(String consumerTag,
+                                         Envelope envelope,
+                                         AMQP.BasicProperties properties,
+                                         byte[] body) throws IOException {
+                String userName = new String( body, "UTF-8" );
+                try {
+                    processQuery( userName );
+                } catch (Exception ex) {
+                    _logger.error( ex.toString() );
+                } finally {
+                    _queriesChannel.basicAck(envelope.getDeliveryTag(), false);
+                }
+              }
+            };
+            _queriesChannel.basicConsume(
+                _queriesExchangeName, false, consumer
+            );
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+                public void run() {
+                    try {
+                        releaseNetworkResources();
+                    } catch (IOException | TimeoutException ex) {
+                        try {
+                            _logger.error( ex.toString() );
+                        } catch (IOException ex1) {
+                            System.err.println( ex1.toString() );
+                        }
+                    }
+                }
+             });
+        }catch( IOException | TimeoutException e ){
+            releaseNetworkResources();
+            throw e;
+        }
     }
 
     private void processQuery( String userName ) throws IOException{
@@ -105,6 +128,22 @@ public class QueryHandlerController {
             MessageProperties.PERSISTENT_TEXT_PLAIN,
             result.getBytes()
         );
+    }
+
+    private void releaseNetworkResources() throws IOException,
+                                           TimeoutException{
+        if( _queriesChannel != null ){
+            _queriesChannel.close();
+            _queriesChannel = null;
+        }
+        if( _queriesResultsChannel != null ){
+            _queriesResultsChannel.close();
+            _queriesResultsChannel = null;
+        }
+        if( _connection != null ){
+            _connection.close();
+            _connection = null;
+        }
     }
 
 }

@@ -53,14 +53,19 @@ public class CustomerQueryController {
     }
 
     public void run() throws IOException, TimeoutException{
-        _connFactory.setHost( _hostName );
-        _connection = _connFactory.newConnection();
-        initQueryChannel();
-        initQueryResultChannel();
-        sendQuery();
-        _queryResultChannel.basicConsume(
-            _queryResultsQueueName, false, _queryResultsConsumer
-        );
+        try{
+            _connFactory.setHost( _hostName );
+            _connection = _connFactory.newConnection();
+            initQueryChannel();
+            initQueryResultChannel();
+            sendQuery();
+            _queryResultChannel.basicConsume(
+                _queryResultsQueueName, false, _queryResultsConsumer
+            );
+        }catch( IOException | TimeoutException e ){
+            releaseNetworkResources();
+            throw e;
+        }
     }
 
     private void initQueryChannel() throws IOException{
@@ -92,12 +97,28 @@ public class CustomerQueryController {
             try {
                 String result = new String( body, "UTF-8" );
                 _logger.trace( _name + " received query result: " + result );
-                shutdown();
+                releaseNetworkResources();
             } catch (Exception ex) {
                 _logger.error( ex.toString() );
             }
           }
         };
+    }
+
+    private void releaseNetworkResources() throws IOException,
+                                                  TimeoutException{
+        if( _queryChannel != null ){
+            _queryChannel.close();
+            _queryChannel = null;
+        }
+        if( _queryResultChannel != null ){
+            _queryResultChannel.close();
+            _queryResultChannel = null;
+        }
+        if( _connection != null ){
+            _connection.close();
+            _connection = null;
+        }
     }
 
     private void sendQuery() throws IOException{
@@ -109,10 +130,5 @@ public class CustomerQueryController {
         );
     }
 
-    private void shutdown() throws IOException, TimeoutException{
-        _queryChannel.close();
-        _queryResultChannel.close();
-        _connection.close();
-    }
 
 }
