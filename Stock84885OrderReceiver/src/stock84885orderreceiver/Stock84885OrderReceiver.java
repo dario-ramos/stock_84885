@@ -43,7 +43,7 @@ public class Stock84885OrderReceiver {
                 currDirPrefix + "or_console_lock.txt"
             );
             auditLogger = new FileLogger(
-                currDirPrefix + "log.txt"
+                currDirPrefix + "audit_log.txt"
             );
             int maxStock = Integer.parseInt(
                 config.getProperty( Configuration.MAX_STOCK )
