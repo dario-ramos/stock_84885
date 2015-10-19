@@ -6,13 +6,11 @@
 package core;
 
 import java.io.InvalidObjectException;
-import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import org.apache.commons.lang3.SerializationUtils;
 
 /**
  *
@@ -55,7 +53,7 @@ public class Order{
     private static final String FIELD_SEPARATOR = "|";
 
     public Order(){
-        _id = "";
+        _id = " ";
     }
 
     //Had to do this because serialize broke down after adding a field
