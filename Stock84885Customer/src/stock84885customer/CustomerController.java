@@ -109,8 +109,7 @@ public class CustomerController {
             throws IOException, TimeoutException{
         _logger.trace( _name + " received order result: " + orderResult );
         if( orderResult.equals(EOrderState.REJECTED.name()) ){
-            _deliveryChannel.basicCancel( _deliveryConsumerTag );
-            _deliveryChannel.close();
+            releaseNetworkResources();
             return;
         }
         _deliveryConsumerTag = _deliveryChannel.basicConsume(
@@ -133,7 +132,6 @@ public class CustomerController {
                                      byte[] body) throws IOException {
             try {
                 handleOrderResult( new String( body, "UTF-8" ) );
-                releaseNetworkResources();
             } catch (Exception ex) {
                 _logger.error( ex.toString() );
             }
@@ -157,7 +155,7 @@ public class CustomerController {
             String orderID = new String( body, "UTF-8" );
             _logger.trace( _name + " received order " + orderID + "!" );
             try {
-                _deliveryChannel.close();
+                releaseNetworkResources();
             } catch (TimeoutException ex) {
                 _logger.error( ex.toString() );
             }
