@@ -79,7 +79,7 @@ public class OrdersFile implements IOrders{
             file.close();
             //Add new order
             order.setID( UUID.randomUUID().toString() );
-            order.State = initialState;
+            order.setState( initialState );
             input += orderToFileLine( order );
             //Write the new String with the replaced line OVER the same file
             FileOutputStream fileOut = new FileOutputStream(_filePath);
@@ -123,19 +123,19 @@ public class OrdersFile implements IOrders{
         }
         Order order = new Order();
         order.setID(fields[0]);
-        order.CustomerName = fields[1];
-        order.ProductType = EProductType.valueOf( fields[2] );
-        order.Count = Integer.parseInt( fields[3] );
-        order.State = EOrderState.valueOf( fields[4] );
+        order.setCustomerName( fields[1] );
+        order.setProductType( EProductType.valueOf( fields[2] ) );
+        order.setCount( Integer.parseInt( fields[3] ) );
+        order.setState( EOrderState.valueOf( fields[4] ) );
         return order;
     }
 
     private String orderToFileLine( Order order ){
         return order.getID() + FIELD_SEPARATOR +
-               order.CustomerName + FIELD_SEPARATOR +
-               order.ProductType + FIELD_SEPARATOR +
-               order.Count + FIELD_SEPARATOR +
-               order.State.name();
+               order.getCustomerName() + FIELD_SEPARATOR +
+               order.getProductType() + FIELD_SEPARATOR +
+               order.getCount() + FIELD_SEPARATOR +
+               order.getState().name();
     }
 
     private void doSetState(Order order, Order.EOrderState state)
@@ -158,7 +158,7 @@ public class OrdersFile implements IOrders{
             FileSystemUtils.NEWLINE, iOrderId
         );
         String lineToReplace = input.substring(iOrderId, iEndOfLine);
-        order.State = state;
+        order.setState( state );
         input = input.replace(
             lineToReplace, orderToFileLine( order )
         );

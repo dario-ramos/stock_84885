@@ -21,8 +21,6 @@ import core.Order.EProductType;
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -96,11 +94,12 @@ public class CustomerController {
     private Order generateOrder() throws IOException, InterruptedException{
         _logger.trace( _name + " generating order..." );
         Order order = new Order();
-        order.CustomerName = _name;
-        order.ProductType = EProductType.randomProductType();
+        order.setCustomerName( _name );
+        order.setProductType( EProductType.randomProductType() );
         Random random = new Random();
         random.setSeed( System.nanoTime() );
-        order.Count = 1 + random.nextInt(_maxProductCount);
+        order.setCount( 1 + random.nextInt(_maxProductCount) );
+        order.setState( EOrderState.UNDEFINED );
         int delay = random.nextInt( _maxOrderGenerationDelay );
         Thread.sleep( delay );
         return order;

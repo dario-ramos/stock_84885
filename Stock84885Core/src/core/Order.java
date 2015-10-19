@@ -21,6 +21,7 @@ import org.apache.commons.lang3.SerializationUtils;
 public class Order{
 
     public enum EOrderState{
+        UNDEFINED,
         RECEIVED,
         APPROVED,
         REJECTED,
@@ -46,12 +47,11 @@ public class Order{
         }
     }
 
-    public String CustomerName;
-    public EProductType ProductType;
+    private EOrderState state;
+    private EProductType productType;
+    private int count;
+    private String customerName;
     private String _id;
-    public int Count;
-    public EOrderState State;
-    //private static long serialVersionUID = -2031969733962027974L;
     private static final String FIELD_SEPARATOR = "|";
 
     public Order(){
@@ -61,27 +61,59 @@ public class Order{
     //Had to do this because serialize broke down after adding a field
     //It gave "local class incompatible" error
     public byte[] serialize(){
-        String s = CustomerName + FIELD_SEPARATOR +
-                   ProductType.name() + FIELD_SEPARATOR +
+        String s = customerName + FIELD_SEPARATOR +
+                   productType.name() + FIELD_SEPARATOR +
                    _id + FIELD_SEPARATOR +
-                   Integer.toString(Count) + FIELD_SEPARATOR +
-                   State.name();
+                   Integer.toString(count) + FIELD_SEPARATOR +
+                   state.name();
         return s.getBytes();
+    }
+
+    public EOrderState getState(){
+        return state;
+    }
+
+    public EProductType getProductType(){
+        return productType;
+    }
+
+    public int getCount(){
+        return count;
+    }
+
+    public String getCustomerName(){
+        return customerName;
     }
 
     public String getID(){
         return _id;
     }
 
+    public void setCount( int count ){
+        this.count = count;
+    }
+
+    public void setCustomerName( String customerName ){
+        this.customerName = customerName;
+    }
+
     public void setID( String id ){
         _id = id;
     }
 
+    public void setProductType( EProductType productType ){
+        this.productType = productType;
+    }
+
+    public void setState( EOrderState newVal ){
+        state = newVal;
+    }
+
     @Override
     public String toString(){
-        return "Customer: " + CustomerName +
-               ", Prod: " + ProductType +
-               ", Count: " + Count; 
+        return "Customer: " + customerName +
+               ", Prod: " + productType +
+               ", Count: " + count; 
     }
 
     public static Order deserialize( byte[] bytes )
@@ -92,11 +124,11 @@ public class Order{
             throw new InvalidObjectException( "Bad order: " + s );
         }
         Order o = new Order();
-        o.CustomerName = fields[0];
-        o.ProductType = EProductType.valueOf(fields[1]);
+        o.customerName = fields[0];
+        o.productType = EProductType.valueOf(fields[1]);
         o._id = fields[2];
-        o.Count = Integer.parseInt( fields[3] );
-        o.State = EOrderState.valueOf(fields[4]);
+        o.count = Integer.parseInt( fields[3] );
+        o.state = EOrderState.valueOf(fields[4]);
         return o;
     }
 }

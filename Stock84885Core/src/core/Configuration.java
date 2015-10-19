@@ -21,7 +21,6 @@ import java.util.Properties;
  * @author dario
  */
 public class Configuration {
-    private static final String CONFIG_FILE_NAME = "config.properties";
     public static final String CUSTOMER_HOSTNAME = "customer_hostname";
     public static final String CUSTOMER_QUERY_HOSTNAME =
         "customer_query_hostname";
@@ -47,6 +46,7 @@ public class Configuration {
         "shipping_exchange_name";
     public static final String SHIPPING_HOSTNAME = "shipping_hostname";
     private Properties _props = null;
+    private static final String CONFIG_FILE_NAME = "config.properties";
 
     public Configuration() throws FileNotFoundException, IOException,
                                   UnsupportedEncodingException,

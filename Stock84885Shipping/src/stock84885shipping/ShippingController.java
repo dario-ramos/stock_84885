@@ -119,7 +119,7 @@ public class ShippingController {
         Thread.sleep( delay );
         _deliveryChannel.basicPublish(
             _deliveryExchangeName,
-            order.CustomerName,
+            order.getCustomerName(),
             MessageProperties.PERSISTENT_TEXT_PLAIN,
             order.getID().getBytes()
         );

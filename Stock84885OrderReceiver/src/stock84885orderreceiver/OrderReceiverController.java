@@ -137,15 +137,16 @@ public class OrderReceiverController {
         _traceLogger.trace( _name + " received order: " + order.toString() );
         _auditLogger.trace( _name + " received order: " + order.toString() );
         _orders.create( order, EOrderState.RECEIVED );
-        boolean available = _stock.decrement(order.ProductType, order.Count);
+        boolean available = _stock.decrement(order.getProductType(),
+                                             order.getCount() );
         if( !available ){
             _orders.setState( order, EOrderState.REJECTED );
-            sendOrderResultToCustomer( order.CustomerName,
+            sendOrderResultToCustomer( order.getCustomerName(),
                                        EOrderState.REJECTED.name());
             return;
         }
         _orders.setState( order, Order.EOrderState.APPROVED );
-        sendOrderResultToCustomer( order.CustomerName,
+        sendOrderResultToCustomer( order.getCustomerName(),
                                    EOrderState.APPROVED.name() );
         sendOrderToShipping( order );
     }

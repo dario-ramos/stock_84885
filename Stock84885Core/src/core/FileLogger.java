@@ -14,8 +14,6 @@ import java.nio.channels.FileLock;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.sql.Timestamp;
-import java.util.Date;
 
 /**
  * Uses a system-wide lock mechanism
