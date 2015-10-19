@@ -158,8 +158,8 @@ public class OrderReceiverController {
             _ordersChannel = null;
         }
         if( _resultsChannel != null ){
-            _ordersChannel.close();
-            _ordersChannel = null;
+            _resultsChannel.close();
+            _resultsChannel = null;
         }
         if( _shippingChannel != null ){
             _shippingChannel.close();
