@@ -51,7 +51,7 @@ public class Stock84885OrderReceiver {
             IStock stock = new StockFile(
                 currDirPrefix + "stock.txt", maxStock
             );
-            IOrders orders = new OrdersFile( currDirPrefix + "orders.txt" );
+            IOrders orders = new OrdersFile( currDirPrefix + "orders_" );
             OrderReceiverController orderReceiver =
                 new OrderReceiverController(
                         id, stock, orders, config, traceLogger, auditLogger

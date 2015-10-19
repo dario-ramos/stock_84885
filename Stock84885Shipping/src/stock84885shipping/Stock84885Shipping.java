@@ -38,7 +38,7 @@ public class Stock84885Shipping {
             String currDirPrefix = FileSystemUtils.getCurrentDir() +
                                    File.separator;
             Configuration config = new Configuration();
-            IOrders orders = new OrdersFile( currDirPrefix + "orders.txt" );
+            IOrders orders = new OrdersFile( currDirPrefix + "orders_" );
             logger = new ConsoleLogger( currDirPrefix + "sh_console_lock.txt" );
             ShippingController shipping = new ShippingController(
                 id, orders, config, logger

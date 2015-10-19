@@ -28,36 +28,22 @@ import java.util.UUID;
  */
 public class OrdersFile implements IOrders{
 
-    private final String _filePath;
-    private final String _lockFilePath;
+    private final String filePathBase;
     private static final String FIELD_SEPARATOR = "|";
 
-    public OrdersFile( String filePath ){
-        _filePath = filePath;
-        _lockFilePath = filePath + "_lock";
+    public OrdersFile( String filePathBase ){
+        this.filePathBase = filePathBase;
     }
 
     @Override
     public List<Order> getOrdersByUserName(String userName)
             throws IOException {
         List<Order> orders = new ArrayList<Order>();
-        Path path = Paths.get( _lockFilePath );
-        try ( FileChannel fileChannel = FileChannel.open(
-              path, StandardOpenOption.WRITE, StandardOpenOption.APPEND )){
-            FileLock lock = fileChannel.lock();
-            //Save the file content to the String "input"
-            BufferedReader file = new BufferedReader(new FileReader(_filePath));
-            String line;
-            String input = "";
-            while ((line = file.readLine()) != null){
-                if( !line.startsWith(userName + FIELD_SEPARATOR) ){
-                    continue;
-                }
-                orders.add( fileLineToOrder(line) );
-            }
-            file.close();
-            lock.release();
-            fileChannel.close();
+        String prefixes = "0123456789abcdef";
+        for( int i = 0; i<prefixes.length(); i++ ){
+            String filePath = filePathBase + prefixes.charAt(i) + ".txt";
+            String lockFilePath = filePath + "_lock";
+            getOrdersByUserName( orders, lockFilePath, filePath, userName );
         }
         return orders;
     }
@@ -65,12 +51,18 @@ public class OrdersFile implements IOrders{
     @Override
     public void create(Order order, Order.EOrderState initialState)
             throws IOException {
-        Path path = Paths.get( _lockFilePath );
-        try (FileChannel fileChannel = FileChannel.open(
-                path, StandardOpenOption.WRITE, StandardOpenOption.APPEND )){
-            FileLock lock = fileChannel.lock();
+        order.setID( UUID.randomUUID().toString() );
+        String filePath = getFilePath( order );
+        String lockFilePath = getLockFilePath( order );
+        Path path = Paths.get( lockFilePath );
+        FileLock lock = null;
+        FileChannel fileChannel = null;
+        try{
+            fileChannel = FileChannel.open(
+                path, StandardOpenOption.WRITE, StandardOpenOption.APPEND );
+            lock = fileChannel.lock();
             //Save the file content to the String "input"
-            BufferedReader file = new BufferedReader(new FileReader(_filePath));
+            BufferedReader file = new BufferedReader(new FileReader(filePath));
             String line;
             String input = "";
             while ((line = file.readLine()) != null){
@@ -78,41 +70,63 @@ public class OrdersFile implements IOrders{
             }
             file.close();
             //Add new order
-            order.setID( UUID.randomUUID().toString() );
             order.setState( initialState );
             input += orderToFileLine( order );
             //Write the new String with the replaced line OVER the same file
-            FileOutputStream fileOut = new FileOutputStream(_filePath);
-            fileOut.write(input.getBytes());
-            fileOut.close();
-            lock.release();
-            fileChannel.close();
+            try( FileOutputStream fileOut = new FileOutputStream(filePath) ){
+                fileOut.write(input.getBytes());
+            }
+        }finally{
+            if( lock != null ){
+                lock.release();
+            }
+            if( fileChannel != null ){
+                fileChannel.close();
+            }
         }
     }
 
     @Override
     public void setState(Order order, Order.EOrderState state)
             throws IOException{
-        Path path = Paths.get( _lockFilePath );
-        try (FileChannel fileChannel = FileChannel.open(
-                path, StandardOpenOption.WRITE, StandardOpenOption.APPEND )){
-            FileLock lock = fileChannel.lock();
+        String lockFilePath = getLockFilePath(order);
+        Path path = Paths.get( lockFilePath );
+        FileLock lock = null;
+        FileChannel fileChannel = null;
+        try{
+            fileChannel = FileChannel.open(
+                path, StandardOpenOption.WRITE, StandardOpenOption.APPEND );
+            lock = fileChannel.lock();
             doSetState( order, state );
-            lock.release();
-            fileChannel.close();
+        }finally{
+            if( lock != null ){
+                lock.release();
+            }
+            if( fileChannel != null ){
+                fileChannel.close();
+            }
         }
     }
     
     @Override
     public void setState(String orderID, Order.EOrderState state)
             throws IOException {
-        Path path = Paths.get( _lockFilePath );
-        try (FileChannel fileChannel = FileChannel.open(
-                path, StandardOpenOption.WRITE, StandardOpenOption.APPEND )){
-            FileLock lock = fileChannel.lock();
+        String lockFilePath = getLockFilePath( orderID );
+        Path path = Paths.get( lockFilePath );
+        FileLock lock = null;
+        FileChannel fileChannel = null;
+        try{
+            fileChannel = FileChannel.open(
+                path, StandardOpenOption.WRITE, StandardOpenOption.APPEND );
+            lock = fileChannel.lock();
             doSetState( orderID, state );
-            lock.release();
-            fileChannel.close();
+        }finally{
+            if( lock != null ){
+                lock.release();
+            }
+            if( fileChannel != null ){
+                fileChannel.close();
+            }
         }
     }
 
@@ -130,6 +144,22 @@ public class OrdersFile implements IOrders{
         return order;
     }
 
+    private String getFilePath( Order order ){
+        return getFilePath( order.getID() );
+    }
+
+    private String getFilePath( String orderID ){
+        return filePathBase + orderID.charAt(0) + ".txt";
+    }
+
+    private String getLockFilePath( Order order ){
+        return getFilePath(order) + "_lock";
+    }
+
+    private String getLockFilePath( String orderID ){
+        return getFilePath(orderID) + "_lock";
+    }
+
     private String orderToFileLine( Order order ){
         return order.getID() + FIELD_SEPARATOR +
                order.getCustomerName() + FIELD_SEPARATOR +
@@ -140,14 +170,16 @@ public class OrdersFile implements IOrders{
 
     private void doSetState(Order order, Order.EOrderState state)
             throws FileNotFoundException, IOException{
+        String filePath = getFilePath(order);
         //Save the file content to the String "input"
-        BufferedReader file = new BufferedReader(new FileReader(_filePath));
-        String line;
         String input = "";
-        while ((line = file.readLine()) != null){
-            input += line + FileSystemUtils.NEWLINE;
+        try( BufferedReader file = new BufferedReader(
+                new FileReader(filePath)) ){
+            String line;
+            while ((line = file.readLine()) != null){
+                input += line + FileSystemUtils.NEWLINE;
+            }
         }
-        file.close();
         //Replace state
         String orderId = order.getID();
         int iOrderId = input.indexOf( orderId );
@@ -163,21 +195,23 @@ public class OrdersFile implements IOrders{
             lineToReplace, orderToFileLine( order )
         );
         //Write the new String with the replaced line OVER the same file
-        FileOutputStream fileOut = new FileOutputStream(_filePath);
-        fileOut.write(input.getBytes());
-        fileOut.close();
+        try( FileOutputStream fileOut = new FileOutputStream(filePath) ){
+            fileOut.write(input.getBytes());
+        }
     }
-    
+
     private void doSetState(String orderID, Order.EOrderState state)
             throws FileNotFoundException, IOException{
+        String filePath = getFilePath( orderID );
         //Save the file content to the String "input"
-        BufferedReader file = new BufferedReader(new FileReader(_filePath));
-        String line;
         String input = "";
-        while ((line = file.readLine()) != null){
-            input += line + FileSystemUtils.NEWLINE;
+        try( BufferedReader file = new BufferedReader(
+                new FileReader(filePath)) ){
+            String line;
+            while ((line = file.readLine()) != null){
+                input += line + FileSystemUtils.NEWLINE;
+            }
         }
-        file.close();
         //Replace state
         int iOrderID = input.indexOf( orderID );
         if( iOrderID <= -1 ){
@@ -192,9 +226,41 @@ public class OrdersFile implements IOrders{
             lineToReplace, state.name()
         );
        //Write the new String with the replaced line OVER the same file
-        FileOutputStream fileOut = new FileOutputStream(_filePath);
-        fileOut.write(input.getBytes());
-        fileOut.close();
+        try( FileOutputStream fileOut = new FileOutputStream(filePath) ){
+            fileOut.write(input.getBytes());
+        }
+    }
+
+    private void getOrdersByUserName( List<Order> orders,
+                                      String lockFilePath, String filePath,
+                                      String userName )
+            throws IOException{
+        Path path = Paths.get( lockFilePath );
+        FileLock lock = null;
+        FileChannel fileChannel = null;
+        try{
+            fileChannel = FileChannel.open(
+              path, StandardOpenOption.WRITE, StandardOpenOption.APPEND );
+            lock = fileChannel.lock();
+            //Save the file content to the String "input"
+            BufferedReader file = new BufferedReader(new FileReader(filePath));
+            String line;
+            String input = "";
+            while ((line = file.readLine()) != null){
+                if( !line.startsWith(userName + FIELD_SEPARATOR) ){
+                    continue;
+                }
+                orders.add( fileLineToOrder(line) );
+            }
+            file.close();
+        }finally{
+            if( lock != null ){
+                lock.release();
+            }
+            if( fileChannel != null ){
+                fileChannel.close();
+            }
+        }
     }
 
 }
