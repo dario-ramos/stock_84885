@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.regex.Pattern;
 
 /**
  *
@@ -117,7 +118,7 @@ public class Order{
     public static Order deserialize( byte[] bytes )
             throws UnsupportedEncodingException, InvalidObjectException{
         String s = new String( bytes, "UTF-8" );
-        String[] fields = s.split( FIELD_SEPARATOR );
+        String[] fields = s.split( Pattern.quote(FIELD_SEPARATOR) );
         if( fields.length != 5 ){
             throw new InvalidObjectException( "Bad order: " + s );
         }
