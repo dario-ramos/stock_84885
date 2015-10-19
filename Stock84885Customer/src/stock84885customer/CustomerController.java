@@ -133,7 +133,7 @@ public class CustomerController {
                                      byte[] body) throws IOException {
             try {
                 handleOrderResult( new String( body, "UTF-8" ) );
-                _resultChannel.close();
+                releaseNetworkResources();
             } catch (Exception ex) {
                 _logger.error( ex.toString() );
             }
@@ -201,7 +201,6 @@ public class CustomerController {
                               MessageProperties.PERSISTENT_TEXT_PLAIN,
                               order.serialize());
         _logger.trace( _name + " sent order " + order.toString() );
-        releaseNetworkResources();
     }
 
 }
