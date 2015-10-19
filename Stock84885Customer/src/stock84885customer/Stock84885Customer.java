@@ -7,7 +7,6 @@ package stock84885customer;
 
 import core.Configuration;
 import core.ConsoleLogger;
-import core.FileLogger;
 import core.ILogger;
 import java.io.IOException;
 import java.io.PrintWriter;

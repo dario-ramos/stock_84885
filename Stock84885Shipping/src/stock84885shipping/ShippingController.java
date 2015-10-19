@@ -28,31 +28,31 @@ import java.util.concurrent.TimeoutException;
  */
 public class ShippingController {
 
-    private Channel _deliveryChannel;
-    private Channel _shippingChannel;
-    private ConnectionFactory _connFactory;
-    private Connection _connection;
-    private final ILogger _logger;
-    private final int _maxOrderDeliveryDelay;
-    private final IOrders _orders;
-    private final String _deliveryExchangeName;
-    private final String _shippingExchangeName;
-    private final String _hostName;
-    private final String _name;
+    private Channel deliveryChannel;
+    private Channel shippingChannel;
+    private ConnectionFactory connFactory;
+    private Connection connection;
+    private final ILogger logger;
+    private final int maxOrderDeliveryDelay;
+    private final IOrders orders;
+    private final String deliveryExchangeName;
+    private final String shippingExchangeName;
+    private final String hostName;
+    private final String name;
 
     public ShippingController( int id, IOrders orders,
                                Configuration config, ILogger logger ){
-        _deliveryExchangeName = config.getProperty(
+        deliveryExchangeName = config.getProperty(
             Configuration.DELIVERY_EXCHANGE_NAME
         );
-        _shippingExchangeName = config.getProperty(
+        shippingExchangeName = config.getProperty(
             Configuration.SHIPPING_EXCHANGE_NAME
         );
-        _hostName = config.getProperty( Configuration.SHIPPING_HOSTNAME );
-        _name = "Shipping-" + id;
-        _logger = logger;
-        _orders = orders;
-        _maxOrderDeliveryDelay = Integer.parseInt( config.getProperty(
+        hostName = config.getProperty( Configuration.SHIPPING_HOSTNAME );
+        name = "Shipping-" + id;
+        this.logger = logger;
+        this.orders = orders;
+        maxOrderDeliveryDelay = Integer.parseInt( config.getProperty(
             Configuration.MAX_ORDER_DELIVERY_DELAY
         ) );
     }
@@ -60,37 +60,36 @@ public class ShippingController {
     public void run() throws URISyntaxException,
                              IOException, TimeoutException{
         try{
-            _connFactory = new ConnectionFactory();
-            _connFactory.setHost(_hostName);
-            _connection = _connFactory.newConnection();
-            _shippingChannel = _connection.createChannel();
-            _deliveryChannel = _connection.createChannel();
-            _shippingChannel.queueDeclare(_shippingExchangeName,
+            connFactory = new ConnectionFactory();
+            connFactory.setHost(hostName);
+            connection = connFactory.newConnection();
+            shippingChannel = connection.createChannel();
+            deliveryChannel = connection.createChannel();
+            shippingChannel.queueDeclare(shippingExchangeName,
                 true, //Passive declaration
                 false, //Non-durable queue
                 false, //Non-exclusive queue
                 null //No arguments
             );
-            _deliveryChannel.exchangeDeclare(_deliveryExchangeName, "direct");
-            _logger.trace( _name + " waiting for orders" );
-            _shippingChannel.basicQos(1);
-            final Consumer consumer = new DefaultConsumer(_shippingChannel) {
+            deliveryChannel.exchangeDeclare(deliveryExchangeName, "direct");
+            logger.trace(name + " waiting for orders" );
+            shippingChannel.basicQos(1);
+            final Consumer consumer = new DefaultConsumer(shippingChannel) {
               @Override
               public void handleDelivery(String consumerTag,
                                          Envelope envelope,
                                          AMQP.BasicProperties properties,
                                          byte[] body) throws IOException {
                   Order order = Order.deserialize(body);
-                  _logger.trace( _name + " received order " + order.getID() );
+                  logger.trace(name + " received order " + order.getID() );
                   try {
                       deliverOrder(order);
                   } catch (Exception ex) {
-                      _logger.error( ex.toString() );
+                      logger.error( ex.toString() );
                   }
               }
             };
-            _shippingChannel.basicConsume(
-                _shippingExchangeName, false, consumer
+            shippingChannel.basicConsume(shippingExchangeName, false, consumer
             );
             Runtime.getRuntime().addShutdownHook(new Thread() {
                 public void run() {
@@ -98,7 +97,7 @@ public class ShippingController {
                         releaseNetworkResources();
                     } catch (IOException | TimeoutException ex) {
                         try {
-                            _logger.error( ex.toString() );
+                            logger.error( ex.toString() );
                         } catch (IOException ex1) {
                             System.err.println( ex1.toString() );
                         }
@@ -115,30 +114,29 @@ public class ShippingController {
             throws InterruptedException, IOException{
         Random random = new Random();
         random.setSeed( System.nanoTime() );
-        int delay = random.nextInt( _maxOrderDeliveryDelay );
+        int delay = random.nextInt(maxOrderDeliveryDelay );
         Thread.sleep( delay );
-        _deliveryChannel.basicPublish(
-            _deliveryExchangeName,
+        deliveryChannel.basicPublish(deliveryExchangeName,
             order.getCustomerName(),
             MessageProperties.PERSISTENT_TEXT_PLAIN,
             order.getID().getBytes()
         );
-        _orders.setState(order, Order.EOrderState.DELIVERED);
+        orders.setState(order, Order.EOrderState.DELIVERED);
     }
 
     private void releaseNetworkResources() throws IOException,
                                            TimeoutException{
-        if( _deliveryChannel != null ){
-            _deliveryChannel.close();
-            _deliveryChannel = null;
+        if( deliveryChannel != null ){
+            deliveryChannel.close();
+            deliveryChannel = null;
         }
-        if( _shippingChannel != null ){
-            _shippingChannel.close();
-            _shippingChannel = null;
+        if( shippingChannel != null ){
+            shippingChannel.close();
+            shippingChannel = null;
         }
-        if( _connection != null ){
-            _connection.close();
-            _connection = null;
+        if( connection != null ){
+            connection.close();
+            connection = null;
         }
     }
 

@@ -38,7 +38,7 @@ public class OrdersFile implements IOrders{
     @Override
     public List<Order> getOrdersByUserName(String userName)
             throws IOException {
-        List<Order> orders = new ArrayList<Order>();
+        List<Order> orders = new ArrayList<>();
         String prefixes = "0123456789abcdef";
         for( int i = 0; i<prefixes.length(); i++ ){
             String filePath = filePathBase + prefixes.charAt(i) + ".txt";

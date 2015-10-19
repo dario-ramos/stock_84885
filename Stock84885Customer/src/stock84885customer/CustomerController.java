@@ -28,62 +28,60 @@ import java.util.concurrent.TimeoutException;
  */
 public class CustomerController {
 
-    private Channel _deliveryChannel;
-    private Channel _resultChannel;
-    private Channel _ordersChannel;
-    private Connection _connection;
-    private ConnectionFactory _connFactory;
-    private Consumer _deliveryConsumer;
-    private Consumer _resultConsumer;
-    private final ILogger _logger;
-    private final int _id;
-    private final int _maxOrderGenerationDelay;
-    private final int _maxProductCount;
-    private final String _hostName;
-    private final String _name;
-    private final String _deliveryExchangeName;
-    private final String _ordersExchangeName;
-    private final String _resultsExchangeName;
-    private String _deliveryConsumerTag;
-    private String _deliveryQueueName;
-    private String _resultQueueName;
+    private Channel deliveryChannel;
+    private Channel resultChannel;
+    private Channel ordersChannel;
+    private Connection connection;
+    private ConnectionFactory connFactory;
+    private Consumer deliveryConsumer;
+    private Consumer resultConsumer;
+    private final ILogger logger;
+    private final int id;
+    private final int maxOrderGenerationDelay;
+    private final int maxProductCount;
+    private final String hostName;
+    private final String name;
+    private final String deliveryExchangeName;
+    private final String ordersExchangeName;
+    private final String resultsExchangeName;
+    private String deliveryQueueName;
+    private String resultQueueName;
 
     public CustomerController( int id, 
                                Configuration config, ILogger logger ){
-        _id = id;
-        _ordersExchangeName = config.getProperty(
+        this.id = id;
+        ordersExchangeName = config.getProperty(
             Configuration.ORDERS_EXCHANGE_NAME
         );
-        _resultsExchangeName = config.getProperty(
+        resultsExchangeName = config.getProperty(
             Configuration.RESULTS_EXCHANGE_NAME
         );
-        _deliveryExchangeName = config.getProperty(
+        deliveryExchangeName = config.getProperty(
             Configuration.DELIVERY_EXCHANGE_NAME
         );
-        _maxOrderGenerationDelay = Integer.parseInt(
+        maxOrderGenerationDelay = Integer.parseInt(
             config.getProperty( Configuration.MAX_ORDER_GENERATION_DELAY )
         );
-        _maxProductCount = Integer.parseInt(
+        maxProductCount = Integer.parseInt(
             config.getProperty( Configuration.MAX_ORDER_PRODUCT_COUNT )
         );
-        _hostName = config.getProperty(
+        hostName = config.getProperty(
             Configuration.CUSTOMER_HOSTNAME
         );
-        _name = "Customer-" + _id;
-        _logger = logger;
+        name = "Customer-" + this.id;
+        this.logger = logger;
     }
 
     public void run()
             throws IOException, TimeoutException, InterruptedException{
         try{
-            _connFactory = new ConnectionFactory();
-            _connFactory.setHost(_hostName);
-            _connection = _connFactory.newConnection();
+            connFactory = new ConnectionFactory();
+            connFactory.setHost(hostName);
+            connection = connFactory.newConnection();
             initResultChannel();
             initDeliveryChannel();
             sendOrder();
-            _resultChannel.basicConsume(
-                _resultQueueName, false, _resultConsumer
+            resultChannel.basicConsume(resultQueueName, false, resultConsumer
             );
         }catch( IOException | TimeoutException e ){
             releaseNetworkResources();
@@ -92,39 +90,38 @@ public class CustomerController {
     }
 
     private Order generateOrder() throws IOException, InterruptedException{
-        _logger.trace( _name + " generating order..." );
+        logger.trace(name + " generating order..." );
         Order order = new Order();
-        order.setCustomerName( _name );
+        order.setCustomerName(name );
         order.setProductType( EProductType.randomProductType() );
         Random random = new Random();
         random.setSeed( System.nanoTime() );
-        order.setCount( 1 + random.nextInt(_maxProductCount) );
+        order.setCount(1 + random.nextInt(maxProductCount) );
         order.setState( EOrderState.UNDEFINED );
-        int delay = random.nextInt( _maxOrderGenerationDelay );
+        int delay = random.nextInt(maxOrderGenerationDelay );
         Thread.sleep( delay );
         return order;
     }
 
     private void handleOrderResult( String orderResult )
             throws IOException, TimeoutException{
-        _logger.trace( _name + " received order result: " + orderResult );
+        logger.trace(name + " received order result: " + orderResult );
         if( orderResult.equals(EOrderState.REJECTED.name()) ){
             releaseNetworkResources();
             return;
         }
-        _deliveryConsumerTag = _deliveryChannel.basicConsume(
-            _deliveryQueueName, false, _deliveryConsumer
+        deliveryChannel.basicConsume(
+            deliveryQueueName, false, deliveryConsumer
         );
     }
 
     private void initResultChannel() throws IOException, TimeoutException{
-        _resultChannel = _connection.createChannel();
-        _resultChannel.exchangeDeclare( _resultsExchangeName, "direct" );
-        _resultQueueName = _resultChannel.queueDeclare().getQueue();
-        _resultChannel.queueBind(
-                _resultQueueName, _resultsExchangeName, _name
+        resultChannel = connection.createChannel();
+        resultChannel.exchangeDeclare(resultsExchangeName, "direct" );
+        resultQueueName = resultChannel.queueDeclare().getQueue();
+        resultChannel.queueBind(resultQueueName, resultsExchangeName, name
         );
-        _resultConsumer = new DefaultConsumer(_resultChannel){
+        resultConsumer = new DefaultConsumer(resultChannel){
           @Override
           public void handleDelivery(String consumerTag,
                                      Envelope envelope,
@@ -133,31 +130,30 @@ public class CustomerController {
             try {
                 handleOrderResult( new String( body, "UTF-8" ) );
             } catch (Exception ex) {
-                _logger.error( ex.toString() );
+                logger.error( ex.toString() );
             }
           }
         };
     }
 
     private void initDeliveryChannel() throws IOException, TimeoutException{
-        _deliveryChannel = _connection.createChannel();
-        _deliveryChannel.exchangeDeclare( _deliveryExchangeName, "direct" );
-        _deliveryQueueName = _deliveryChannel.queueDeclare().getQueue();
-        _deliveryChannel.queueBind(
-                _deliveryQueueName, _deliveryExchangeName, _name
+        deliveryChannel = connection.createChannel();
+        deliveryChannel.exchangeDeclare(deliveryExchangeName, "direct" );
+        deliveryQueueName = deliveryChannel.queueDeclare().getQueue();
+        deliveryChannel.queueBind(deliveryQueueName, deliveryExchangeName, name
         );
-        _deliveryConsumer = new DefaultConsumer(_deliveryChannel){
+        deliveryConsumer = new DefaultConsumer(deliveryChannel){
           @Override
           public void handleDelivery(String consumerTag,
                                      Envelope envelope,
                                      AMQP.BasicProperties properties,
                                      byte[] body) throws IOException {
             String orderID = new String( body, "UTF-8" );
-            _logger.trace( _name + " received order " + orderID + "!" );
+            logger.trace(name + " received order " + orderID + "!" );
             try {
                 releaseNetworkResources();
             } catch (TimeoutException ex) {
-                _logger.error( ex.toString() );
+                logger.error( ex.toString() );
             }
           }
         };
@@ -165,40 +161,39 @@ public class CustomerController {
 
     private void releaseNetworkResources() throws IOException,
                                                   TimeoutException{
-        if( _ordersChannel != null ){
-            _ordersChannel.close();
-            _ordersChannel = null;
+        if( ordersChannel != null ){
+            ordersChannel.close();
+            ordersChannel = null;
         }
-        if( _resultChannel != null ){
-            _resultChannel.close();
-            _resultChannel = null;
+        if( resultChannel != null ){
+            resultChannel.close();
+            resultChannel = null;
         }
-        if( _deliveryChannel != null ){
-            _deliveryChannel.close();
-            _deliveryChannel = null;
+        if( deliveryChannel != null ){
+            deliveryChannel.close();
+            deliveryChannel = null;
         }
-        if( _connection != null ){
-            _connection.close();
-            _connection = null;
+        if( connection != null ){
+            connection.close();
+            connection = null;
         }
     }
 
     private void sendOrder() throws InterruptedException, IOException,
                                     TimeoutException{
-        _ordersChannel = _connection.createChannel();
-        _ordersChannel.queueDeclare(
-                _ordersExchangeName,
+        ordersChannel = connection.createChannel();
+        ordersChannel.queueDeclare(ordersExchangeName,
                 true, //Passive declaration
                 false, //Non-durable queue
                 false, //Non-exclusive queue
                 null    //No arguments
         );
         Order order = generateOrder();
-        _ordersChannel.basicPublish( "",
-                              _ordersExchangeName,
+        ordersChannel.basicPublish("",
+                              ordersExchangeName,
                               MessageProperties.PERSISTENT_TEXT_PLAIN,
                               order.serialize());
-        _logger.trace( _name + " sent order " + order.toString() );
+        logger.trace(name + " sent order " + order.toString() );
     }
 
 }

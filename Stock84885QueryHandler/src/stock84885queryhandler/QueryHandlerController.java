@@ -28,51 +28,49 @@ import java.util.concurrent.TimeoutException;
  */
 public class QueryHandlerController {
 
-    private Channel _queriesChannel;
-    private Channel _queriesResultsChannel;
-    private ConnectionFactory _connFactory;
-    private Connection _connection;
-    private final ILogger _logger;
-    private final IOrders _orders;
-    private final String _hostName;
-    private final String _name;
-    private final String _queriesExchangeName;
-    private final String _queriesResultsExchangeName;
+    private Channel queriesChannel;
+    private Channel queriesResultsChannel;
+    private ConnectionFactory connFactory;
+    private Connection connection;
+    private final ILogger logger;
+    private final IOrders orders;
+    private final String hostName;
+    private final String name;
+    private final String queriesExchangeName;
+    private final String queriesResultsExchangeName;
 
     public QueryHandlerController( int id, Configuration config,
                                    IOrders orders, ILogger logger ){
-        _logger = logger;
-        _orders = orders;
-        _hostName = config.getProperty(Configuration.QUERY_HANDLER_HOSTNAME);
-        _name = "QueryHandler" + id;
-        _queriesExchangeName = config.getProperty(
+        this.logger = logger;
+        this.orders = orders;
+        hostName = config.getProperty(Configuration.QUERY_HANDLER_HOSTNAME);
+        name = "QueryHandler" + id;
+        queriesExchangeName = config.getProperty(
             Configuration.QUERIES_EXCHANGE_NAME
         );
-        _queriesResultsExchangeName = config.getProperty(
+        queriesResultsExchangeName = config.getProperty(
             Configuration.QUERIES_RESULTS_EXCHANGE_NAME
         );
     }
 
     public void run() throws IOException, TimeoutException{
         try{
-            _connFactory = new ConnectionFactory();
-            _connFactory.setHost(_hostName);
-            _connection = _connFactory.newConnection();
-            _queriesChannel = _connection.createChannel();
-            _queriesResultsChannel = _connection.createChannel();
-            _queriesChannel.queueDeclare(
-                _queriesExchangeName,
+            connFactory = new ConnectionFactory();
+            connFactory.setHost(hostName);
+            connection = connFactory.newConnection();
+            queriesChannel = connection.createChannel();
+            queriesResultsChannel = connection.createChannel();
+            queriesChannel.queueDeclare(queriesExchangeName,
                 true, //Passive declaration
                 false, //Non-durable queue
                 false, //Non-exclusive queue
                 null //No arguments
             );
-            _queriesResultsChannel.exchangeDeclare(
-                _queriesResultsExchangeName, "direct"
+            queriesResultsChannel.exchangeDeclare(queriesResultsExchangeName, "direct"
             );
-            _logger.trace( _name + " waiting for queries..." );
-            _queriesChannel.basicQos(1);
-            final Consumer consumer = new DefaultConsumer(_queriesChannel) {
+            logger.trace(name + " waiting for queries..." );
+            queriesChannel.basicQos(1);
+            final Consumer consumer = new DefaultConsumer(queriesChannel) {
               @Override
               public void handleDelivery(String consumerTag,
                                          Envelope envelope,
@@ -82,14 +80,13 @@ public class QueryHandlerController {
                 try {
                     processQuery( userName );
                 } catch (Exception ex) {
-                    _logger.error( ex.toString() );
+                    logger.error( ex.toString() );
                 } finally {
-                    _queriesChannel.basicAck(envelope.getDeliveryTag(), false);
+                    queriesChannel.basicAck(envelope.getDeliveryTag(), false);
                 }
               }
             };
-            _queriesChannel.basicConsume(
-                _queriesExchangeName, false, consumer
+            queriesChannel.basicConsume(queriesExchangeName, false, consumer
             );
             Runtime.getRuntime().addShutdownHook(new Thread() {
                 public void run() {
@@ -97,7 +94,7 @@ public class QueryHandlerController {
                         releaseNetworkResources();
                     } catch (IOException | TimeoutException ex) {
                         try {
-                            _logger.error( ex.toString() );
+                            logger.error( ex.toString() );
                         } catch (IOException ex1) {
                             System.err.println( ex1.toString() );
                         }
@@ -111,7 +108,7 @@ public class QueryHandlerController {
     }
 
     private void processQuery( String userName ) throws IOException{
-        List<Order> orders = _orders.getOrdersByUserName( userName );
+        List<Order> orders = this.orders.getOrdersByUserName( userName );
         String result = "";
         if( !orders.isEmpty() ){
             for( int i=0; i<orders.size()-1; i++ ){
@@ -120,10 +117,9 @@ public class QueryHandlerController {
             result += orders.get( orders.size() - 1 ).toString();
         }
         //Send query result to user
-        _logger.trace( _name + " sending query result " + result + " to " +
+        logger.trace(name + " sending query result " + result + " to " +
                        userName );
-        _queriesResultsChannel.basicPublish(
-            _queriesResultsExchangeName,
+        queriesResultsChannel.basicPublish(queriesResultsExchangeName,
             userName,
             MessageProperties.PERSISTENT_TEXT_PLAIN,
             result.getBytes()
@@ -132,17 +128,17 @@ public class QueryHandlerController {
 
     private void releaseNetworkResources() throws IOException,
                                            TimeoutException{
-        if( _queriesChannel != null ){
-            _queriesChannel.close();
-            _queriesChannel = null;
+        if( queriesChannel != null ){
+            queriesChannel.close();
+            queriesChannel = null;
         }
-        if( _queriesResultsChannel != null ){
-            _queriesResultsChannel.close();
-            _queriesResultsChannel = null;
+        if( queriesResultsChannel != null ){
+            queriesResultsChannel.close();
+            queriesResultsChannel = null;
         }
-        if( _connection != null ){
-            _connection.close();
-            _connection = null;
+        if( connection != null ){
+            connection.close();
+            connection = null;
         }
     }
 

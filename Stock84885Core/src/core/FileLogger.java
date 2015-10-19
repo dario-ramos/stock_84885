@@ -21,10 +21,10 @@ import java.nio.file.StandardOpenOption;
  */
 public class FileLogger implements ILogger {
 
-    private final String _filePath;
+    private final String filePath;
 
     public FileLogger( String logFilePath ) throws FileNotFoundException{
-        _filePath = logFilePath;
+        filePath = logFilePath;
     }
 
     @Override
@@ -35,7 +35,7 @@ public class FileLogger implements ILogger {
     @Override
     public void trace(String msg) throws IOException {
         msg = DateUtils.getTimeStamp() + ": " + msg + NEWLINE;
-        Path path = Paths.get( _filePath );
+        Path path = Paths.get(filePath );
         try (FileChannel fileChannel = FileChannel.open(
                 path, StandardOpenOption.WRITE, StandardOpenOption.APPEND )) {
             long pos = 0;

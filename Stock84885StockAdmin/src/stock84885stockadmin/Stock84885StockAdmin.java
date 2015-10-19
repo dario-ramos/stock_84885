@@ -7,7 +7,6 @@ package stock84885stockadmin;
 
 import core.Configuration;
 import core.ConsoleLogger;
-import core.FileLogger;
 import core.FileSystemUtils;
 import core.ILogger;
 import core.IStock;

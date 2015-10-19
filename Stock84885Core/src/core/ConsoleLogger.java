@@ -7,7 +7,6 @@ package core;
 
 import static core.FileSystemUtils.NEWLINE;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.Path;
@@ -20,10 +19,10 @@ import java.nio.file.StandardOpenOption;
  */
 public class ConsoleLogger implements ILogger {
 
-    private String _lockFilePath;
+    private String lockFilePath;
 
     public ConsoleLogger( String lockFilePath ){
-        _lockFilePath = lockFilePath;
+        this.lockFilePath = lockFilePath;
     }
 
     @Override
@@ -34,7 +33,7 @@ public class ConsoleLogger implements ILogger {
     @Override
     public void trace(String msg) throws IOException {
         msg = DateUtils.getTimeStamp() + ": " + msg + NEWLINE;
-        Path path = Paths.get( _lockFilePath );
+        Path path = Paths.get(lockFilePath );
         try (FileChannel fileChannel = FileChannel.open(
                 path, StandardOpenOption.WRITE, StandardOpenOption.APPEND )) {
             FileLock lock = fileChannel.lock();

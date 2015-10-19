@@ -28,71 +28,69 @@ import java.util.concurrent.TimeoutException;
  */
 public class OrderReceiverController {
 
-    private Channel _ordersChannel;
-    private Channel _resultsChannel;
-    private Channel _shippingChannel;
-    private Connection _connection;
-    private ConnectionFactory _connFactory;
-    private final ILogger _auditLogger;
-    private final ILogger _traceLogger;
-    private final IOrders _orders;
-    private final IStock _stock;
-    private final String _hostName;
-    private final String _name;
-    private final String _ordersExchangeName;
-    private final String _resultsExchangeName;
-    private final String _shippingExchangeName;
+    private Channel ordersChannel;
+    private Channel resultsChannel;
+    private Channel shippingChannel;
+    private Connection connection;
+    private ConnectionFactory connFactory;
+    private final ILogger auditLogger;
+    private final ILogger traceLogger;
+    private final IOrders orders;
+    private final IStock stock;
+    private final String hostName;
+    private final String name;
+    private final String ordersExchangeName;
+    private final String resultsExchangeName;
+    private final String shippingExchangeName;
 
     public OrderReceiverController( int id,
                                     IStock stock, 
                                     IOrders orders,
                                     Configuration config, ILogger traceLogger,
                                     ILogger auditLogger ){
-        _ordersExchangeName = config.getProperty(
+        ordersExchangeName = config.getProperty(
             Configuration.ORDERS_EXCHANGE_NAME
         );
-        _resultsExchangeName = config.getProperty(
+        resultsExchangeName = config.getProperty(
             Configuration.RESULTS_EXCHANGE_NAME
         );
-        _shippingExchangeName = config.getProperty(
+        shippingExchangeName = config.getProperty(
             Configuration.SHIPPING_EXCHANGE_NAME
         );
-        _hostName = config.getProperty(
+        hostName = config.getProperty(
             Configuration.ORDER_RECEIVER_HOSTNAME
         );
-        _name = "OrderReceiver-" + id;
-        _traceLogger = traceLogger;
-        _auditLogger = auditLogger;
-        _stock = stock;
-        _orders = orders;
+        name = "OrderReceiver-" + id;
+        this.traceLogger = traceLogger;
+        this.auditLogger = auditLogger;
+        this.stock = stock;
+        this.orders = orders;
     }
 
     public void run() throws IOException, TimeoutException{
         try{
-            _connFactory = new ConnectionFactory();
-            _connFactory.setHost(_hostName);
-            _connection = _connFactory.newConnection();
-            _ordersChannel = _connection.createChannel();
-            _resultsChannel = _connection.createChannel();
-            _shippingChannel = _connection.createChannel();
-            _ordersChannel.queueDeclare(
-                _ordersExchangeName,
+            connFactory = new ConnectionFactory();
+            connFactory.setHost(hostName);
+            connection = connFactory.newConnection();
+            ordersChannel = connection.createChannel();
+            resultsChannel = connection.createChannel();
+            shippingChannel = connection.createChannel();
+            ordersChannel.queueDeclare(ordersExchangeName,
                 true, //Passive declaration
                 false, //Non-durable queue
                 false, //Non-exclusive queue
                 null //No arguments
             );
-            _resultsChannel.exchangeDeclare(_resultsExchangeName, "direct");
-            _shippingChannel.queueDeclare(
-                _shippingExchangeName,
+            resultsChannel.exchangeDeclare(resultsExchangeName, "direct");
+            shippingChannel.queueDeclare(shippingExchangeName,
                 true, //Passive declaration
                 false, //Non-durable queue
                 false, //Non-exclusive queue
                 null    //No arguments
             );
-            _traceLogger.trace( _name + " waiting for orders" );
-            _ordersChannel.basicQos(1);
-            final Consumer consumer = new DefaultConsumer(_ordersChannel) {
+            traceLogger.trace(name + " waiting for orders" );
+            ordersChannel.basicQos(1);
+            final Consumer consumer = new DefaultConsumer(ordersChannel) {
                 @Override
                 public void handleDelivery(String consumerTag,
                                            Envelope envelope,
@@ -102,16 +100,15 @@ public class OrderReceiverController {
                     try {
                         processOrder(order);
                     } catch (InterruptedException | TimeoutException ex) {
-                        _traceLogger.error( ex.toString() );
+                        traceLogger.error( ex.toString() );
                     } finally {
-                        _ordersChannel.basicAck(
+                        ordersChannel.basicAck(
                             envelope.getDeliveryTag(), false
                         );
                     }
                 }
             };
-            _ordersChannel.basicConsume(
-                _ordersExchangeName, false, consumer
+            ordersChannel.basicConsume(ordersExchangeName, false, consumer
             );
             Runtime.getRuntime().addShutdownHook(new Thread() {
                 public void run() {
@@ -119,7 +116,7 @@ public class OrderReceiverController {
                         releaseNetworkResources();
                     } catch (IOException | TimeoutException ex) {
                         try {
-                            _traceLogger.error( ex.toString() );
+                            traceLogger.error( ex.toString() );
                         } catch (IOException ex1) {
                             System.err.println( ex1.toString() );
                         }
@@ -134,18 +131,18 @@ public class OrderReceiverController {
 
     private void processOrder(Order order)
             throws InterruptedException, IOException, TimeoutException {
-        _traceLogger.trace( _name + " received order: " + order.toString() );
-        _auditLogger.trace( _name + " received order: " + order.toString() );
-        _orders.create( order, EOrderState.RECEIVED );
-        boolean available = _stock.decrement(order.getProductType(),
+        traceLogger.trace(name + " received order: " + order.toString() );
+        auditLogger.trace(name + " received order: " + order.toString() );
+        orders.create( order, EOrderState.RECEIVED );
+        boolean available = stock.decrement(order.getProductType(),
                                              order.getCount() );
         if( !available ){
-            _orders.setState( order, EOrderState.REJECTED );
+            orders.setState( order, EOrderState.REJECTED );
             sendOrderResultToCustomer( order.getCustomerName(),
                                        EOrderState.REJECTED.name());
             return;
         }
-        _orders.setState( order, Order.EOrderState.APPROVED );
+        orders.setState( order, Order.EOrderState.APPROVED );
         sendOrderResultToCustomer( order.getCustomerName(),
                                    EOrderState.APPROVED.name() );
         sendOrderToShipping( order );
@@ -153,31 +150,30 @@ public class OrderReceiverController {
 
     private void releaseNetworkResources() throws IOException,
                                                   TimeoutException{
-        if( _ordersChannel != null ){
-            _ordersChannel.close();
-            _ordersChannel = null;
+        if( ordersChannel != null ){
+            ordersChannel.close();
+            ordersChannel = null;
         }
-        if( _resultsChannel != null ){
-            _resultsChannel.close();
-            _resultsChannel = null;
+        if( resultsChannel != null ){
+            resultsChannel.close();
+            resultsChannel = null;
         }
-        if( _shippingChannel != null ){
-            _shippingChannel.close();
-            _shippingChannel = null;
+        if( shippingChannel != null ){
+            shippingChannel.close();
+            shippingChannel = null;
         }
-        if( _connection != null ){
-            _connection.close();
-            _connection = null;
+        if( connection != null ){
+            connection.close();
+            connection = null;
         }
     }
 
     private void sendOrderResultToCustomer( String customerName,
                                             String result )
             throws IOException, TimeoutException{
-        _traceLogger.trace( _name + " sending order result " + result + " to " +
+        traceLogger.trace(name + " sending order result " + result + " to " +
                             customerName );
-        _resultsChannel.basicPublish(
-            _resultsExchangeName,
+        resultsChannel.basicPublish(resultsExchangeName,
             customerName,
             MessageProperties.PERSISTENT_TEXT_PLAIN,
             result.getBytes()
@@ -185,12 +181,10 @@ public class OrderReceiverController {
     }
 
     private void sendOrderToShipping( Order order ) throws IOException{
-        _traceLogger.trace(
-            _name + " sending order " + order.getID() + " to Shipping"
+        traceLogger.trace(name + " sending order " + order.getID() + " to Shipping"
         );
-        _shippingChannel.basicPublish(
-            "",
-            _shippingExchangeName,
+        shippingChannel.basicPublish("",
+            shippingExchangeName,
             MessageProperties.PERSISTENT_TEXT_PLAIN,
             order.serialize()
         );

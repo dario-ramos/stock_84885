@@ -24,14 +24,14 @@ import java.nio.file.StandardOpenOption;
  */
 public class StockFile implements IStock {
 
-    private final int _maxStock;
-    private final String _filePath;
-    private final String _lockFilePath;
+    private final int maxStock;
+    private final String filePath;
+    private final String lockFilePath;
 
     public StockFile( String filePath, int maxStock ){
-        _filePath = filePath;
-        _lockFilePath = filePath + "_lock";
-        _maxStock = maxStock;
+        this.filePath = filePath;
+        lockFilePath = filePath + "_lock";
+        this.maxStock = maxStock;
     }
 
     @Override
@@ -48,7 +48,7 @@ public class StockFile implements IStock {
     
     private boolean changeStock( Order.EProductType type, int count )
             throws IOException{
-        Path path = Paths.get( _lockFilePath );
+        Path path = Paths.get(lockFilePath );
         boolean result = false;
         try ( FileChannel fileChannel = FileChannel.open(
               path, StandardOpenOption.WRITE, StandardOpenOption.APPEND )){
@@ -78,7 +78,7 @@ public class StockFile implements IStock {
             );
         }
         int stock = Integer.parseInt( typeAndStock[1].trim() );
-        if( stock + delta < 0 || stock + delta > _maxStock ){
+        if( stock + delta < 0 || stock + delta > maxStock ){
             return false;
         }
         int iStock = input.indexOf( "=", iType ) + 1;
@@ -87,7 +87,7 @@ public class StockFile implements IStock {
             " " + Integer.toString(stock + delta)
         );
         //Write the new String with the replaced line OVER the same file
-        FileOutputStream fileOut = new FileOutputStream(_filePath);
+        FileOutputStream fileOut = new FileOutputStream(filePath);
         fileOut.write(input.getBytes());
         fileOut.close();
         return true;
@@ -95,7 +95,7 @@ public class StockFile implements IStock {
 
     private String readFileIntoString()
             throws FileNotFoundException, IOException{
-        BufferedReader file = new BufferedReader(new FileReader(_filePath));
+        BufferedReader file = new BufferedReader(new FileReader(filePath));
         String line;
         String input = "";
         while ((line = file.readLine()) != null){

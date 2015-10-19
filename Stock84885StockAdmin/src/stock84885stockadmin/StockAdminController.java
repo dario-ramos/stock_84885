@@ -6,13 +6,9 @@
 package stock84885stockadmin;
 
 import core.Configuration;
-import core.FileSystemUtils;
 import core.ILogger;
 import core.IStock;
-import core.Order;
 import core.Order.EProductType;
-import core.StockFile;
-import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Random;
@@ -23,19 +19,19 @@ import java.util.Random;
  */
 public class StockAdminController {
 
-    private IStock _stock;
-    private ILogger _logger;
-    private final int _maxProductCount;
-    private final String _name;
+    private final IStock stock;
+    private final ILogger logger;
+    private final int maxProductCount;
+    private final String name;
 
     public StockAdminController( int id, Configuration config,
                                  IStock stock, ILogger logger ){
-        _stock = stock;
-        _logger = logger;
-        _maxProductCount = Integer.parseInt(
+        this.stock = stock;
+        this.logger = logger;
+        maxProductCount = Integer.parseInt(
             config.getProperty(Configuration.MAX_ORDER_PRODUCT_COUNT)
         );
-        _name = "StockAdmin-" + id;
+        name = "StockAdmin-" + id;
     }
 
     public void run() throws URISyntaxException, IOException{
@@ -43,19 +39,17 @@ public class StockAdminController {
         EProductType type = EProductType.randomProductType();
         Random random = new Random();
         random.setSeed( System.nanoTime() );
-        int count = 1 + random.nextInt(_maxProductCount);
+        int count = 1 + random.nextInt(maxProductCount);
         //Now decide whether to increment or decrement
         boolean increment = (random.nextInt() % 2 == 0);
         if( increment ){
-            _logger.trace(
-                _name + " will increment " + type.name() + " by " + count
+            logger.trace(name + " will increment " + type.name() + " by " + count
             );
-            _stock.increment(type, count);
+            stock.increment(type, count);
         }else{
-            _logger.trace(
-                _name + " will decrement " + type.name() + " by " + count
+            logger.trace(name + " will decrement " + type.name() + " by " + count
             );
-            _stock.decrement(type, count);
+            stock.decrement(type, count);
         }
     }
 

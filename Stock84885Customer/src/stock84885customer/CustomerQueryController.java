@@ -24,43 +24,43 @@ import java.util.concurrent.TimeoutException;
  */
 public class CustomerQueryController {
 
-    private Channel _queryChannel;
-    private Channel _queryResultChannel;
-    private Connection _connection;
-    private Consumer _queryResultsConsumer;
-    private final ConnectionFactory _connFactory;
-    private final ILogger _logger;
-    private final String _hostName;
-    private final String _name;
-    private final String _queryExchangeName;
-    private final String _queryResultsExchangeName;
-    private String _queryResultsQueueName;
+    private Channel queryChannel;
+    private Channel queryResultChannel;
+    private Connection connection;
+    private Consumer queryResultsConsumer;
+    private final ConnectionFactory connFactory;
+    private final ILogger logger;
+    private final String hostName;
+    private final String name;
+    private final String queryExchangeName;
+    private final String queryResultsExchangeName;
+    private String queryResultsQueueName;
 
     public CustomerQueryController( int id, Configuration config,
                                     ILogger logger ){
-        _connFactory = new ConnectionFactory();
-        _logger = logger;
-        _hostName = config.getProperty(
+        connFactory = new ConnectionFactory();
+        this.logger = logger;
+        hostName = config.getProperty(
             Configuration.CUSTOMER_QUERY_HOSTNAME
         );
-        _name = "Customer-" + id;
-        _queryExchangeName = config.getProperty(
+        name = "Customer-" + id;
+        queryExchangeName = config.getProperty(
             Configuration.QUERIES_EXCHANGE_NAME
         );
-        _queryResultsExchangeName = config.getProperty(
+        queryResultsExchangeName = config.getProperty(
             Configuration.QUERIES_RESULTS_EXCHANGE_NAME
         );
     }
 
     public void run() throws IOException, TimeoutException{
         try{
-            _connFactory.setHost( _hostName );
-            _connection = _connFactory.newConnection();
+            connFactory.setHost( hostName );
+            connection = connFactory.newConnection();
             initQueryChannel();
             initQueryResultChannel();
             sendQuery();
-            _queryResultChannel.basicConsume(
-                _queryResultsQueueName, false, _queryResultsConsumer
+            queryResultChannel.basicConsume(
+                queryResultsQueueName, false, queryResultsConsumer
             );
         }catch( IOException | TimeoutException e ){
             releaseNetworkResources();
@@ -69,9 +69,9 @@ public class CustomerQueryController {
     }
 
     private void initQueryChannel() throws IOException{
-        _queryChannel = _connection.createChannel();
-        _queryChannel.queueDeclare(
-                _queryExchangeName,
+        queryChannel = connection.createChannel();
+        queryChannel.queueDeclare(
+                queryExchangeName,
                 true, //Passive declaration
                 false, //Non-durable queue
                 false, //Non-exclusive queue
@@ -80,15 +80,15 @@ public class CustomerQueryController {
     }
 
     private void initQueryResultChannel() throws IOException{
-        _queryResultChannel = _connection.createChannel();
-        _queryResultChannel.exchangeDeclare(
-            _queryResultsExchangeName, "direct"
+        queryResultChannel = connection.createChannel();
+        queryResultChannel.exchangeDeclare(
+            queryResultsExchangeName, "direct"
         );
-        _queryResultsQueueName = _queryResultChannel.queueDeclare().getQueue();
-        _queryResultChannel.queueBind(
-            _queryResultsQueueName, _queryResultsExchangeName, _name
+        queryResultsQueueName = queryResultChannel.queueDeclare().getQueue();
+        queryResultChannel.queueBind(
+            queryResultsQueueName, queryResultsExchangeName, name
         );
-        _queryResultsConsumer = new DefaultConsumer(_queryResultChannel){
+        queryResultsConsumer = new DefaultConsumer(queryResultChannel){
           @Override
           public void handleDelivery(String consumerTag,
                                      Envelope envelope,
@@ -96,10 +96,10 @@ public class CustomerQueryController {
                                      byte[] body) throws IOException {
             try {
                 String result = new String( body, "UTF-8" );
-                _logger.trace( _name + " received query result: " + result );
+                logger.trace( name + " received query result: " + result );
                 releaseNetworkResources();
             } catch (Exception ex) {
-                _logger.error( ex.toString() );
+                logger.error( ex.toString() );
             }
           }
         };
@@ -107,26 +107,26 @@ public class CustomerQueryController {
 
     private void releaseNetworkResources() throws IOException,
                                                   TimeoutException{
-        if( _queryChannel != null ){
-            _queryChannel.close();
-            _queryChannel = null;
+        if( queryChannel != null ){
+            queryChannel.close();
+            queryChannel = null;
         }
-        if( _queryResultChannel != null ){
-            _queryResultChannel.close();
-            _queryResultChannel = null;
+        if( queryResultChannel != null ){
+            queryResultChannel.close();
+            queryResultChannel = null;
         }
-        if( _connection != null ){
-            _connection.close();
-            _connection = null;
+        if( connection != null ){
+            connection.close();
+            connection = null;
         }
     }
 
     private void sendQuery() throws IOException{
-        _queryChannel.basicPublish(
+        queryChannel.basicPublish(
             "",
-            _queryExchangeName,
+            queryExchangeName,
             MessageProperties.PERSISTENT_TEXT_PLAIN,
-            _name.getBytes()
+            name.getBytes()
         );
     }
 

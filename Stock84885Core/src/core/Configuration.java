@@ -45,29 +45,29 @@ public class Configuration {
     public static final String SHIPPING_EXCHANGE_NAME =
         "shipping_exchange_name";
     public static final String SHIPPING_HOSTNAME = "shipping_hostname";
-    private Properties _props = null;
+    private Properties props = null;
     private static final String CONFIG_FILE_NAME = "config.properties";
 
     public Configuration() throws FileNotFoundException, IOException,
                                   UnsupportedEncodingException,
                                   URISyntaxException{
-        _props = new Properties();
+        props = new Properties();
         String configFilePath = FileSystemUtils.getCurrentDir() +
                                 File.separator + 
                                 CONFIG_FILE_NAME;
         try (InputStream input =
              new FileInputStream(configFilePath)) {
-            _props.load(input);
+            props.load(input);
         }
     }
 
     public List<String> getMultivaluedProperty( String key ){
-        String s = _props.getProperty(key);
+        String s = props.getProperty(key);
         return Arrays.asList( s.split(",") );
     }
 
     public String getProperty( String key ){
-        return _props.getProperty(key);
+        return props.getProperty(key);
     }
 
 }
